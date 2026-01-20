@@ -4,7 +4,7 @@ services:
     name: pacs-track-backend
     runtime: node
     plan: free
-    buildCommand: npm install && cd apps/backend && npm run build
+    buildCommand: npm install && cd apps/backend && npm install && npm run build
     startCommand: cd apps/backend && npm run start:prod
     healthCheckPath: /health
     envVars:
@@ -24,7 +24,7 @@ services:
     name: pacs-track-frontend
     runtime: node
     plan: free
-    buildCommand: npm install && cd apps/frontend && npm run build
+    buildCommand: npm install && cd apps/frontend && npm install && npm run build
     startCommand: cd apps/frontend && npm start
     envVars:
       - key: NEXT_PUBLIC_API_URL
