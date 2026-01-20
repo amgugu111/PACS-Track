@@ -9,9 +9,8 @@ services:
     branch: main
     # Auto-deploy on every push to main branch
     autoDeploy: true
-    # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, build backend
-    # Note: Migrations must be run locally with direct connection (port 5432) before deploying
-    buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npm run build:backend
+    # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, run migrations, build backend
+    buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && npm run build:backend
     # Start the application in production mode
     startCommand: node apps/backend/dist/main.js
     # Health check endpoint for monitoring
@@ -20,6 +19,8 @@ services:
       - key: PORT
         value: 10000
       - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
         sync: false
       - key: JWT_SECRET
         sync: false

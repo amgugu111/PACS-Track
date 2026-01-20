@@ -7,7 +7,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         // Retry connection with exponential backoff for reliability
         let retries = 5;
         let delay = 1000;
-        
+
         for (let i = 0; i < retries; i++) {
             try {
                 await this.$connect();
