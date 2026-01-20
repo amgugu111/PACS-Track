@@ -9,8 +9,10 @@ services:
     branch: main
     # Auto-deploy on every push to main branch
     autoDeploy: true
-    # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, run migrations, build backend
-    buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && npm run build:backend
+    # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, build backend
+    # Note: Migrations CANNOT run on Render (IPv4-only, Supabase direct connection requires IPv6)
+    # Run migrations locally before deploying: cd packages/database && npx prisma migrate deploy
+    buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npm run build:backend
     # Start the application in production mode
     startCommand: node apps/backend/dist/main.js
     # Health check endpoint for monitoring
