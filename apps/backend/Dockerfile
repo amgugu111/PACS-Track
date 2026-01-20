@@ -33,22 +33,22 @@ WORKDIR /app
 
 # Copy root package files
 COPY package*.json ./
+COPY turbo.json ./
 
-# Copy packages
+# Copy packages from builder
 COPY --from=builder /app/packages ./packages
 
-# Copy built backend
-COPY --from=builder /app/apps/backend/dist ./dist
-COPY --from=builder /app/apps/backend/package*.json ./
+# Copy backend app and build
+COPY --from=builder /app/apps/backend ./apps/backend
 
-# Install production dependencies only
+# Install all dependencies (needed for workspace references)
 RUN npm install --production
 
 # Generate Prisma Client for production
 WORKDIR /app/packages/database
 RUN npx prisma generate
 
-WORKDIR /app
+WORKDIR /app/apps/backend
 
 EXPOSE 10000
 
