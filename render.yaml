@@ -9,8 +9,9 @@ services:
     branch: main
     # Auto-deploy on every push to main branch
     autoDeploy: true
-    # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, run migrations, build backend
-    buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && npm run build:backend
+    # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, build backend
+    # Note: Migrations are run locally due to Supabase IPv6 requirement. Render is IPv4-only, so we use Session Pooler.
+    buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npm run build:backend
     # Start the application
     startCommand: npm run start --workspace=@pacs-track/backend
     # Health check endpoint for monitoring
