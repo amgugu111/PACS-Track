@@ -1,12 +1,27 @@
 'use client';
 
-import { Box, Container, Typography, AppBar, Toolbar, Button } from '@mui/material';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Box, Container, Typography, AppBar, Toolbar, Button, Tabs, Tab } from '@mui/material';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import GateEntryForm from '@/components/GateEntryForm';
+import GateEntryList from '@/components/GateEntryList';
+import Reports from '@/components/Reports';
+import SeasonManagement from '@/components/SeasonManagement';
+import TargetSetting from '@/components/TargetSetting';
+import SocietyManagement from '@/components/SocietyManagement';
+import PartyManagement from '@/components/PartyManagement';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardPage() {
     const { user, logout } = useAuth();
+    const router = useRouter();
+    const [activeTab, setActiveTab] = useState(0);
+
+    const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+        setActiveTab(newValue);
+    };
 
     return (
         <ProtectedRoute>
@@ -38,17 +53,42 @@ export default function DashboardPage() {
                 </Toolbar>
             </AppBar>
 
-            <Container maxWidth="lg" sx={{ py: 4 }}>
-                <Box sx={{ mb: 4, textAlign: 'center' }}>
-                    <Typography variant="h3" gutterBottom fontWeight="bold">
-                        Rice Miller PACS
-                    </Typography>
-                    <Typography variant="h6" color="text.secondary">
-                        Gate Entry Management System
-                    </Typography>
+            <Container maxWidth="xl" sx={{ py: 4 }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                    <Tabs value={activeTab} onChange={handleTabChange} centered variant="scrollable" scrollButtons="auto">
+                        <Tab label="Analytics Dashboard" />
+                        <Tab label="New Entry" />
+                        <Tab label="View All Entries" />
+                        <Tab label="Season Management" />
+                        <Tab label="Set Targets" />
+                        <Tab label="Societies (PACS)" />
+                        <Tab label="Parties" />
+                        <Tab label="Reports" />
+                    </Tabs>
                 </Box>
 
-                <GateEntryForm />
+                {activeTab === 0 && <AnalyticsDashboard />}
+
+                {activeTab === 1 && (
+                    <GateEntryForm
+                        onSuccess={() => {
+                            // Switch to list view after successful creation
+                            setActiveTab(2);
+                        }}
+                    />
+                )}
+
+                {activeTab === 2 && <GateEntryList />}
+
+                {activeTab === 3 && <SeasonManagement />}
+
+                {activeTab === 4 && <TargetSetting />}
+
+                {activeTab === 5 && <SocietyManagement />}
+
+                {activeTab === 6 && <PartyManagement />}
+
+                {activeTab === 7 && <Reports />}
             </Container>
         </ProtectedRoute>
     );

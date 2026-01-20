@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,145 +7,176 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Rice Mill Model (Multi-tenancy)
 model RiceMill {
-  id          String   @id @default(cuid())
-  name        String
-  email       String   @unique
-  phone       String?
-  address     String?
-  licenseNo   String?  @unique
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relationships
-  users           User[]
+  id              String          @id @default(cuid())
+  name            String
+  email           String          @unique
+  phone           String?
+  address         String?
+  licenseNo       String?         @unique
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   districts       District[]
-  societies       Society[]
   gatePassEntries GatePassEntry[]
+  seasons         Season[]
+  societies       Society[]
+  users           User[]
 
   @@map("rice_mills")
 }
 
-// User Model (Authentication)
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  password   String   // Hashed password
+  id         String    @id @default(cuid())
+  email      String    @unique
+  password   String
   name       String
-  role       UserRole @default(OPERATOR)
-  riceMillId String?  // Optional for SUPER_ADMIN
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relationships
-  riceMill RiceMill? @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  role       UserRole  @default(OPERATOR)
+  riceMillId String?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  riceMill   RiceMill? @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
 
   @@index([riceMillId])
   @@map("users")
 }
 
-enum UserRole {
-  SUPER_ADMIN // Platform admin - manages all rice mills
-  ADMIN       // Full access to rice mill
-  MANAGER     // Can view and create entries
-  OPERATOR    // Can only create entries
-}
-
-// District Model
 model District {
-  id         String   @id @default(cuid())
-  name       String
-  code       String?  @unique
-  state      String?
-  riceMillId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relationships
+  id              String          @id @default(cuid())
+  name            String
+  code            String?
+  state           String?
+  riceMillId      String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   riceMill        RiceMill        @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
-  societies       Society[]
   gatePassEntries GatePassEntry[]
+  societies       Society[]
 
   @@unique([name, riceMillId])
+  @@unique([code, riceMillId])
   @@index([riceMillId])
   @@map("districts")
 }
 
-// Society (PACS) Model
 model Society {
-  id         String   @id @default(cuid())
-  name       String
-  code       String
-  districtId String
-  riceMillId String
-  address    String?
-  contactNo  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relationships
-  riceMill        RiceMill        @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
-  district        District        @relation(fields: [districtId], references: [id], onDelete: Cascade)
-  farmers         Farmer[]
+  id              String          @id @default(cuid())
+  name            String
+  code            String
+  districtId      String
+  riceMillId      String
+  address         String?
+  contactNo       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   gatePassEntries GatePassEntry[]
+  parties         Party[]
+  district        District        @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  riceMill        RiceMill        @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  targets         SocietyTarget[]
 
   @@unique([code, riceMillId])
   @@index([riceMillId])
   @@map("societies")
 }
 
-// Farmer Model
-model Farmer {
-  id         String   @id @default(cuid())
-  name       String
-  fatherName String?
-  phone      String?
-  address    String?
-  societyId  String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relationships
-  society         Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
+model Party {
+  id              String          @id @default(cuid())
+  name            String
+  fatherName      String?
+  phone           String?
+  address         String?
+  societyId       String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   gatePassEntries GatePassEntry[]
+  society         Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
-  @@map("farmers")
+  @@map("parties")
 }
 
-// Gate Pass Entry Model (Core Model for Gate Entry Module)
 model GatePassEntry {
-  id         String   @id @default(cuid())
-  tokenNo    String   // Manual Gatepass Number
-  challanNo  String
-  date       DateTime @default(now())
-  truckNo    String
-  totalQty   Float // in Quintals/Kg
-  totalBags  Int
-  remarks    String? // Optional - for "other info"
-  
-  // Foreign Keys
-  riceMillId String
-  societyId  String
-  farmerId   String
-  districtId String
-  
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  // Relationships
-  riceMill RiceMill @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
-  society  Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
-  farmer   Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
-  district District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  serialNumber Int      @default(autoincrement())
+  tokenNo      String
+  date         DateTime @default(now())
+  partyName    String
+  pacsName     String
+  vehicleNo    String
+  bags         Int
+  quantity     Float
+  remarks      String?
+  challanNo    String?
+  riceMillId   String
+  societyId    String
+  districtId   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  partyId      String
+  seasonId     String
+  district     District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  party        Party    @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  riceMill     RiceMill @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  season       Season   @relation(fields: [seasonId], references: [id])
+  society      Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
   @@unique([tokenNo, riceMillId])
+  @@unique([serialNumber, riceMillId])
   @@index([tokenNo])
   @@index([date])
+  @@index([serialNumber])
+  @@index([partyName])
+  @@index([vehicleNo])
   @@index([riceMillId])
   @@index([societyId])
-  @@index([farmerId])
+  @@index([partyId])
+  @@index([seasonId])
   @@map("gate_pass_entries")
+}
+
+model Season {
+  id              String          @id @default(cuid())
+  name            String
+  type            SeasonType
+  isActive        Boolean         @default(false)
+  riceMillId      String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  gatePassEntries GatePassEntry[]
+  riceMill        RiceMill        @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  targets         SocietyTarget[]
+
+  @@unique([name, type, riceMillId])
+  @@index([riceMillId])
+  @@index([isActive])
+  @@map("seasons")
+}
+
+model SocietyTarget {
+  id             String   @id @default(cuid())
+  seasonId       String
+  societyId      String
+  targetQuantity Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  season         Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  society        Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, societyId])
+  @@index([seasonId])
+  @@index([societyId])
+  @@map("society_targets")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  OPERATOR
+}
+
+enum SeasonType {
+  KHARIF
+  RABI
 }

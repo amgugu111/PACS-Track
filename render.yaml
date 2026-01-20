@@ -1,31 +1,45 @@
 services:
-  # Backend API (NestJS)
+  # NestJS Backend API Service
   - type: web
     name: pacs-track-backend
-    runtime: docker
+    runtime: node
+    env: node
+    region: oregon
     plan: free
-    dockerfilePath: ./apps/backend/Dockerfile
-    dockerContext: .
+    branch: main
+    # Auto-deploy on every push to main branch
+    autoDeploy: true
+    # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, run migrations, build backend
+    buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && npm run build:backend
+    # Start the application
+    startCommand: npm run start --workspace=@pacs-track/backend
+    # Health check endpoint for monitoring
     healthCheckPath: /health
     envVars:
+      - key: PORT
+        value: 10000
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: FRONTEND_URL
         value: https://pacs-track-frontend.onrender.com
 
-  # Frontend (Next.js)
+  # Next.js Frontend Service
   - type: web
     name: pacs-track-frontend
-    runtime: docker
+    runtime: node
+    env: node
+    region: oregon
     plan: free
-    dockerfilePath: ./apps/frontend/Dockerfile
-    dockerContext: .
+    branch: main
+    autoDeploy: true
+    # Build: install deps and build frontend
+    buildCommand: npm ci --include=dev && npm run build:frontend
+    # Start Next.js production server
+    startCommand: npm run start --workspace=@pacs-track/frontend
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: https://pacs-track-backend.onrender.com

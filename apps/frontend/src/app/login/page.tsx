@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -9,8 +9,15 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const { login } = useAuth();
     const router = useRouter();
+
+    console.log('LoginPage: Rendering');
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -19,13 +26,23 @@ export default function LoginPage() {
 
         try {
             await login(email, password);
-            router.push('/dashboard');
+            console.log('Login successful, waiting for state update...');
+            // Wait a bit for state to propagate
+            await new Promise(resolve => setTimeout(resolve, 100));
+            console.log('Redirecting to dashboard...');
+            // Use replace instead of push to prevent back button issues
+            router.replace('/dashboard');
         } catch (err: any) {
+            console.error('Login error:', err);
             setError(err.message || 'Login failed. Please check your credentials.');
         } finally {
             setIsLoading(false);
         }
     };
+
+    if (!mounted) {
+        return null;
+    }
 
     return (
         <div style={{

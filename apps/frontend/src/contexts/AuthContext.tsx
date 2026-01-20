@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 interface User {
     id: string;
@@ -31,16 +32,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Check for stored auth on mount
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
+        console.log('AuthProvider: Loading auth from cookies...');
+        const storedToken = Cookies.get('token');
+        const storedUser = Cookies.get('user');
 
         if (storedToken && storedUser) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
+            try {
+                const parsedUser = JSON.parse(storedUser);
+                console.log('AuthProvider: User found in cookies:', parsedUser.email);
+                setToken(storedToken);
+                setUser(parsedUser);
+            } catch (error) {
+                console.error('AuthProvider: Error parsing user from cookies', error);
+                Cookies.remove('token');
+                Cookies.remove('user');
+            }
+        } else {
+            console.log('AuthProvider: No auth in cookies');
         }
         setIsLoading(false);
     }, []);
+
+    // Debug: Log whenever user state changes
+    useEffect(() => {
+        console.log('AuthProvider: User state changed to:', user?.email || 'null');
+    }, [user]);
 
     const login = async (email: string, password: string) => {
         const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -60,22 +76,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const data = await response.json();
 
-        // Store token and user
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        console.log('Login response received:', { hasToken: !!data.access_token, user: data.user });
+
+        // Store token and user in cookies (expires in 7 days)
+        Cookies.set('token', data.access_token, { expires: 7, sameSite: 'lax', path: '/' });
+        Cookies.set('user', JSON.stringify(data.user), { expires: 7, sameSite: 'lax', path: '/' });
+        console.log('AuthContext: Saved to cookies');
+        // Verify cookies were saved
+        console.log('AuthContext: Verify - token in cookies:', Cookies.get('token') ? 'YES' : 'NO');
 
         setToken(data.access_token);
         setUser(data.user);
+        console.log('AuthContext: State updated with user:', data.user.email);
 
-        router.push('/');
+        // Don't redirect here - let the calling component handle it
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        Cookies.remove('token');
+        Cookies.remove('user');
         setToken(null);
         setUser(null);
-        router.push('/login');
+        console.log('Logout: Cookies cleared, redirecting to login');
+        window.location.href = '/login';
     };
 
     return (

@@ -1,13 +1,9 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, Min, Matches, IsInt } from 'class-validator';
 
 export class CreateGateEntryDto {
     @IsString()
     @IsNotEmpty()
     tokenNo: string;
-
-    @IsString()
-    @IsNotEmpty()
-    challanNo: string;
 
     @IsDateString()
     @IsOptional()
@@ -15,15 +11,22 @@ export class CreateGateEntryDto {
 
     @IsString()
     @IsNotEmpty()
-    truckNo: string;
+    partyName: string; // Name of the Party
 
-    @IsNumber()
-    @Min(0.01, { message: 'Total quantity must be greater than 0' })
-    totalQty: number;
+    @IsString()
+    @IsNotEmpty()
+    @Matches(/^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/, {
+        message: 'Vehicle number must be in Indian format (e.g., OD01AB1234, MH12DE5678)'
+    })
+    vehicleNo: string; // Vehicle Number (Indian format)
 
-    @IsNumber()
-    @Min(1, { message: 'Total bags must be at least 1' })
-    totalBags: number;
+    @IsInt({ message: 'Number of bags must be a whole number' })
+    @Min(1, { message: 'Number of bags must be at least 1' })
+    bags: number;
+
+    @IsNumber({}, { message: 'Quantity must be a valid number' })
+    @Min(0.01, { message: 'Quantity must be greater than 0 kg' })
+    quantity: number; // Quantity in kg
 
     @IsString()
     @IsOptional()
@@ -34,8 +37,8 @@ export class CreateGateEntryDto {
     societyId: string;
 
     @IsString()
-    @IsNotEmpty()
-    farmerName: string; // Smart entry - accepts name instead of ID
+    @IsOptional()
+    seasonId?: string; // Optional - will use active season if not provided
 }
 
 export class UpdateGateEntryDto {
@@ -43,27 +46,30 @@ export class UpdateGateEntryDto {
     @IsOptional()
     tokenNo?: string;
 
-    @IsString()
-    @IsOptional()
-    challanNo?: string;
-
     @IsDateString()
     @IsOptional()
     date?: string;
 
     @IsString()
     @IsOptional()
-    truckNo?: string;
+    partyName?: string;
 
-    @IsNumber()
-    @Min(0.01)
+    @IsString()
     @IsOptional()
-    totalQty?: number;
+    @Matches(/^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/, {
+        message: 'Vehicle number must be in Indian format (e.g., OD01AB1234, MH12DE5678)'
+    })
+    vehicleNo?: string;
 
-    @IsNumber()
+    @IsInt({ message: 'Number of bags must be a whole number' })
     @Min(1)
     @IsOptional()
-    totalBags?: number;
+    bags?: number;
+
+    @IsNumber({}, { message: 'Quantity must be a valid number' })
+    @Min(0.01)
+    @IsOptional()
+    quantity?: number;
 
     @IsString()
     @IsOptional()
@@ -72,8 +78,4 @@ export class UpdateGateEntryDto {
     @IsString()
     @IsOptional()
     societyId?: string;
-
-    @IsString()
-    @IsOptional()
-    farmerId?: string;
 }

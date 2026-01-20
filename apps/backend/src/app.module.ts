@@ -4,8 +4,10 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { GateEntryModule } from './gate-entry/gate-entry.module';
 import { SocietyModule } from './society/society.module';
-import { FarmerModule } from './farmer/farmer.module';
+import { PartyModule } from './party/party.module';
 import { DistrictModule } from './district/district.module';
+import { SeasonModule } from './season/season.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
     imports: [
@@ -16,8 +18,10 @@ import { DistrictModule } from './district/district.module';
         AuthModule,
         GateEntryModule,
         SocietyModule,
-        FarmerModule,
+        PartyModule,
         DistrictModule,
+        SeasonModule,
+        AnalyticsModule,
     ],
 })
 export class AppModule { }

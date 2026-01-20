@@ -11,12 +11,15 @@ import {
     Autocomplete,
     Alert,
     CircularProgress,
+    Snackbar,
+    Chip,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useSocieties, useFarmers, createGateEntry, searchFarmers } from '@/hooks/useApi';
-import type { CreateGateEntryDto, SocietyResponse, FarmerResponse } from '@pacs-track/shared-types';
+import { CheckCircle, CalendarMonth } from '@mui/icons-material';
+import { useSocieties, useParties, createGateEntry, searchParties, useActiveSeason } from '@/hooks/useApi';
+import type { CreateGateEntryDto, SocietyResponse, PartyResponse } from '@pacs-track/shared-types';
 
 interface GateEntryFormProps {
     onSuccess?: () => void;
@@ -26,16 +29,16 @@ interface GateEntryFormProps {
 export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps) {
     // Form state
     const [tokenNo, setTokenNo] = useState('');
-    const [challanNo, setChallanNo] = useState('');
     const [date, setDate] = useState<Date | null>(new Date());
-    const [truckNo, setTruckNo] = useState('');
-    const [totalQty, setTotalQty] = useState<number | ''>('');
-    const [totalBags, setTotalBags] = useState<number | ''>('');
+    const [partyName, setPartyName] = useState(''); // Name of the Party
+    const [vehicleNo, setVehicleNo] = useState(''); // Vehicle Number
+    const [bags, setBags] = useState<number | ''>(''); // Number of Bags
+    const [quantity, setQuantity] = useState<number | ''>(''); // Quantity in kg
     const [remarks, setRemarks] = useState('');
+    const [vehicleNoError, setVehicleNoError] = useState('');
     const [selectedSociety, setSelectedSociety] = useState<SocietyResponse | null>(null);
-    const [farmerName, setFarmerName] = useState('');
-    const [farmerInputValue, setFarmerInputValue] = useState('');
-    const [farmerOptions, setFarmerOptions] = useState<FarmerResponse[]>([]);
+    const [partyInputValue, setPartyInputValue] = useState('');
+    const [partyOptions, setPartyOptions] = useState<PartyResponse[]>([]);
 
     // UI state
     const [loading, setLoading] = useState(false);
@@ -44,65 +47,74 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
 
     // API hooks
     const { societies, isLoading: loadingSocieties } = useSocieties();
-    const { farmers } = useFarmers(selectedSociety?.id);
+    const { parties } = useParties(selectedSociety?.id);
+    const { activeSeason, isLoading: loadingActiveSeason } = useActiveSeason();
 
     // Calculated field: Qty Per Bag
-    const qtyPerBag = totalBags && totalQty ? (Number(totalQty) / Number(totalBags)).toFixed(2) : '0.00';
+    const qtyPerBag = bags && quantity ? (Number(quantity) / Number(bags)).toFixed(2) : '0.00';
 
     // Auto-fill district when society is selected
     const selectedDistrict = selectedSociety?.district?.name || '';
 
-    // Farmer autocomplete search
+    // Party autocomplete search
     useEffect(() => {
-        if (farmerInputValue.trim().length > 0 && selectedSociety) {
+        if (partyInputValue.trim().length > 0 && selectedSociety) {
             const delayDebounceFn = setTimeout(async () => {
                 try {
-                    const results = await searchFarmers(farmerInputValue, selectedSociety.id);
-                    setFarmerOptions(results);
+                    const results = await searchParties(partyInputValue, selectedSociety.id);
+                    setPartyOptions(results);
                 } catch (err) {
-                    console.error('Error searching farmers:', err);
-                    setFarmerOptions(farmers);
+                    console.error('Error searching parties:', err);
+                    setPartyOptions(parties);
                 }
             }, 300);
 
             return () => clearTimeout(delayDebounceFn);
         } else {
-            setFarmerOptions(farmers);
+            setPartyOptions(parties);
         }
-    }, [farmerInputValue, selectedSociety, farmers]);
+    }, [partyInputValue, selectedSociety, parties]);
+
+    // Validate Indian vehicle number format
+    const validateVehicleNumber = (value: string): boolean => {
+        const indianVehicleRegex = /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/;
+        return indianVehicleRegex.test(value);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setSuccess(false);
+        setVehicleNoError('');
 
         // Validation
         if (!tokenNo.trim()) {
             setError('Token number is required');
             return;
         }
-        if (!challanNo.trim()) {
-            setError('Challan number is required');
+        if (!vehicleNo.trim()) {
+            setError('Vehicle number is required');
             return;
         }
-        if (!truckNo.trim()) {
-            setError('Truck number is required');
+        if (!validateVehicleNumber(vehicleNo.trim())) {
+            setError('Vehicle number must be in Indian format (e.g., OD01AB1234, MH12DE5678)');
+            setVehicleNoError('Invalid Indian vehicle number format');
             return;
         }
         if (!selectedSociety) {
             setError('Please select a society');
             return;
         }
-        if (!farmerName.trim()) {
-            setError('Farmer name is required');
+        if (!partyName.trim()) {
+            setError('Party name is required');
             return;
         }
-        if (!totalQty || Number(totalQty) <= 0) {
-            setError('Total quantity must be greater than 0');
+        if (!bags || Number(bags) <= 0 || !Number.isInteger(Number(bags))) {
+            setError('Number of bags must be a whole number and at least 1');
             return;
         }
-        if (!totalBags || Number(totalBags) <= 0) {
-            setError('Total bags must be at least 1');
+        if (!quantity || Number(quantity) <= 0) {
+            setError('Quantity must be greater than 0 kg');
             return;
         }
 
@@ -111,14 +123,13 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
         try {
             const dto: CreateGateEntryDto = {
                 tokenNo: tokenNo.trim(),
-                challanNo: challanNo.trim(),
                 date: date?.toISOString() || new Date().toISOString(),
-                truckNo: truckNo.trim(),
-                totalQty: Number(totalQty),
-                totalBags: Number(totalBags),
+                partyName: partyName.trim(),
+                vehicleNo: vehicleNo.trim().toUpperCase(),
+                bags: Number(bags),
+                quantity: Number(quantity),
                 remarks: remarks.trim() || undefined,
                 societyId: selectedSociety.id,
-                farmerName: farmerName.trim(),
             };
 
             await createGateEntry(dto);
@@ -143,15 +154,15 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
 
     const resetForm = () => {
         setTokenNo('');
-        setChallanNo('');
         setDate(new Date());
-        setTruckNo('');
-        setTotalQty('');
-        setTotalBags('');
+        setPartyName('');
+        setVehicleNo('');
+        setBags('');
+        setQuantity('');
         setRemarks('');
         setSelectedSociety(null);
-        setFarmerName('');
-        setFarmerInputValue('');
+        setPartyInputValue('');
+        setVehicleNoError('');
     };
 
     return (
@@ -160,19 +171,25 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                 <Typography variant="h4" gutterBottom fontWeight="bold" color="primary">
                     Gate Entry Form
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     Register new paddy truck arrival
                 </Typography>
 
-                {success && (
-                    <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(false)}>
-                        Gate entry created successfully!
+                {/* Active Season Info */}
+                {loadingActiveSeason ? (
+                    <CircularProgress size={20} />
+                ) : activeSeason ? (
+                    <Alert severity="info" sx={{ mb: 3 }} icon={<CheckCircle />}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CalendarMonth fontSize="small" />
+                            <Typography variant="body2">
+                                <strong>Active Season:</strong> {activeSeason.name} - {activeSeason.type}
+                            </Typography>
+                        </Box>
                     </Alert>
-                )}
-
-                {error && (
-                    <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
-                        {error}
+                ) : (
+                    <Alert severity="warning" sx={{ mb: 3 }}>
+                        No active season found. Please activate a season before creating entries.
                     </Alert>
                 )}
 
@@ -187,19 +204,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 value={tokenNo}
                                 onChange={(e) => setTokenNo(e.target.value)}
                                 placeholder="e.g., GP-2026-001"
-                                helperText="Unique manual gatepass number"
-                            />
-                        </Grid>
-
-                        {/* Challan Number */}
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                required
-                                label="Challan Number"
-                                value={challanNo}
-                                onChange={(e) => setChallanNo(e.target.value)}
-                                placeholder="e.g., CH-12345"
+                                helperText="Unique token number"
                             />
                         </Grid>
 
@@ -219,18 +224,6 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                             />
                         </Grid>
 
-                        {/* Truck Number */}
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                required
-                                label="Truck Number"
-                                value={truckNo}
-                                onChange={(e) => setTruckNo(e.target.value.toUpperCase())}
-                                placeholder="e.g., OD-01-AB-1234"
-                            />
-                        </Grid>
-
                         {/* Society Selection */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Autocomplete
@@ -239,15 +232,15 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 value={selectedSociety}
                                 onChange={(_, newValue) => {
                                     setSelectedSociety(newValue);
-                                    setFarmerName('');
-                                    setFarmerInputValue('');
+                                    setPartyName('');
+                                    setPartyInputValue('');
                                 }}
                                 loading={loadingSocieties}
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
                                         required
-                                        label="Society (PACS)"
+                                        label="PACS/PPC Name"
                                         helperText="Select the society"
                                         InputProps={{
                                             ...params.InputProps,
@@ -277,39 +270,39 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                             />
                         </Grid>
 
-                        {/* Farmer Search (Smart Autocomplete with freeSolo) */}
+                        {/* Name of the Party (Party Search with freeSolo) */}
                         <Grid size={{ xs: 12 }}>
                             <Autocomplete
                                 freeSolo
-                                options={farmerOptions}
+                                options={partyOptions}
                                 getOptionLabel={(option) => {
                                     if (typeof option === 'string') {
                                         return option;
                                     }
                                     return option.name;
                                 }}
-                                value={farmerName}
+                                value={partyName}
                                 onChange={(_, newValue) => {
                                     if (typeof newValue === 'string') {
-                                        setFarmerName(newValue);
+                                        setPartyName(newValue);
                                     } else if (newValue) {
-                                        setFarmerName(newValue.name);
+                                        setPartyName(newValue.name);
                                     } else {
-                                        setFarmerName('');
+                                        setPartyName('');
                                     }
                                 }}
-                                inputValue={farmerInputValue}
+                                inputValue={partyInputValue}
                                 onInputChange={(_, newInputValue) => {
-                                    setFarmerInputValue(newInputValue);
-                                    setFarmerName(newInputValue);
+                                    setPartyInputValue(newInputValue);
+                                    setPartyName(newInputValue);
                                 }}
                                 disabled={!selectedSociety}
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
                                         required
-                                        label="Farmer Name"
-                                        helperText="Search existing or enter new farmer name"
+                                        label="Name of the Party"
+                                        helperText="Search existing or enter new party name"
                                         placeholder="Type to search or enter new name"
                                     />
                                 )}
@@ -328,43 +321,69 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                             />
                         </Grid>
 
-                        {/* Total Quantity */}
-                        <Grid size={{ xs: 12, md: 4 }}>
+                        {/* Vehicle Number */}
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 required
-                                type="number"
-                                label="Total Quantity"
-                                value={totalQty}
-                                onChange={(e) => setTotalQty(e.target.value ? Number(e.target.value) : '')}
-                                inputProps={{ min: 0, step: 0.01 }}
-                                helperText="In Quintals/Kg"
+                                label="Vehicle Number"
+                                value={vehicleNo}
+                                onChange={(e) => {
+                                    const value = e.target.value.toUpperCase().replace(/-/g, '');
+                                    setVehicleNo(value);
+                                    if (value && !validateVehicleNumber(value)) {
+                                        setVehicleNoError('Format: XX00XX0000');
+                                    } else {
+                                        setVehicleNoError('');
+                                    }
+                                }}
+                                placeholder="e.g., OD01AB1234"
+                                error={!!vehicleNoError}
+                                helperText={vehicleNoError || 'Indian vehicle number format'}
                             />
                         </Grid>
 
-                        {/* Total Bags */}
-                        <Grid size={{ xs: 12, md: 4 }}>
+                        {/* Bags */}
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 required
                                 type="number"
-                                label="Total Bags"
-                                value={totalBags}
-                                onChange={(e) => setTotalBags(e.target.value ? Number(e.target.value) : '')}
+                                label="Bag"
+                                value={bags}
+                                onChange={(e) => {
+                                    const value = e.target.value ? parseInt(e.target.value) : '';
+                                    setBags(value);
+                                }}
                                 inputProps={{ min: 1, step: 1 }}
+                                helperText="Number of bags (whole number)"
+                            />
+                        </Grid>
+
+                        {/* Quantity */}
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <TextField
+                                fullWidth
+                                required
+                                type="number"
+                                label="Quantity (kg)"
+                                value={quantity}
+                                onChange={(e) => setQuantity(e.target.value ? Number(e.target.value) : '')}
+                                inputProps={{ min: 0.01, step: 0.01 }}
+                                helperText="Quantity in kilograms (kg)"
                             />
                         </Grid>
 
                         {/* Qty Per Bag (Calculated, Read-only) */}
-                        <Grid size={{ xs: 12, md: 4 }}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
-                                label="Qty Per Bag"
+                                label="Qty Per Bag (kg)"
                                 value={qtyPerBag}
                                 InputProps={{
                                     readOnly: true,
                                 }}
-                                helperText="Auto-calculated"
+                                helperText="Auto-calculated (kg per bag)"
                                 sx={{
                                     '& .MuiInputBase-input': {
                                         fontWeight: 'bold',
@@ -403,7 +422,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                     type="submit"
                                     variant="contained"
                                     size="large"
-                                    disabled={loading}
+                                    disabled={loading || !activeSeason}
                                     sx={{ minWidth: 150 }}
                                 >
                                     {loading ? <CircularProgress size={24} /> : 'Submit Entry'}
@@ -412,6 +431,30 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
                     </Grid>
                 </Box>
+
+                {/* Success Snackbar */}
+                <Snackbar
+                    open={success}
+                    autoHideDuration={6000}
+                    onClose={() => setSuccess(false)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert onClose={() => setSuccess(false)} severity="success" sx={{ width: '100%' }}>
+                        Gate entry created successfully!
+                    </Alert>
+                </Snackbar>
+
+                {/* Error Snackbar */}
+                <Snackbar
+                    open={!!error}
+                    autoHideDuration={6000}
+                    onClose={() => setError('')}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>
+                        {error}
+                    </Alert>
+                </Snackbar>
             </Paper>
         </LocalizationProvider>
     );
