@@ -25,23 +25,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        value: https://pacs-track-frontend.onrender.com
-
-  # Next.js Frontend Service
-  - type: web
-    name: pacs-track-frontend
-    runtime: node
-    env: node
-    region: oregon
-    plan: free
-    branch: main
-    autoDeploy: true
-    # Build: install deps and build frontend
-    buildCommand: npm ci --include=dev && npm run build:frontend
-    # Start Next.js production server
-    startCommand: npm run start --workspace=@pacs-track/frontend
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        value: https://pacs-track-backend.onrender.com
-      - key: NODE_ENV
-        value: production
+        value: https://your-app.vercel.app
