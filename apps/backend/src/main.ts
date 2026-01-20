@@ -56,6 +56,7 @@ async function bootstrap() {
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 Backend server running on port ${port}`);
     console.log(`📊 Health check available at /health`);
+    console.log(`🔌 Server bound to 0.0.0.0:${port}`);
 }
 
 bootstrap();

@@ -11,8 +11,8 @@ services:
     autoDeploy: true
     # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, run migrations, build backend
     buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && npm run build:backend
-    # Start the application
-    startCommand: npm run start --workspace=@pacs-track/backend
+    # Start the application in production mode
+    startCommand: node apps/backend/dist/main.js
     # Health check endpoint for monitoring
     healthCheckPath: /health
     envVars:
