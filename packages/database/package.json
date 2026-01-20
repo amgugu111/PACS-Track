@@ -1,0 +1,27 @@
+{
+    "name": "@pacs-track/database",
+    "version": "1.0.0",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "scripts": {
+        "generate": "prisma generate",
+        "push": "prisma db push",
+        "migrate": "prisma migrate dev",
+        "studio": "prisma studio",
+        "seed": "ts-node prisma/seed.ts",
+        "create-superadmin": "ts-node src/create-superadmin.ts"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.8.0",
+        "bcryptjs": "^2.4.3"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.0",
+        "prisma": "^5.8.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
+    },
+    "prisma": {
+        "seed": "ts-node prisma/seed.ts"
+    }
+}

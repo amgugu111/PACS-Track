@@ -1,0 +1,33 @@
+{
+    "name": "@pacs-track/frontend",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint"
+    },
+    "dependencies": {
+        "@emotion/react": "^11.14.0",
+        "@emotion/styled": "^11.14.1",
+        "@mui/material": "^7.3.7",
+        "@mui/x-date-pickers": "^8.25.0",
+        "@pacs-track/shared-types": "*",
+        "axios": "^1.13.2",
+        "date-fns": "^4.1.0",
+        "next": "16.1.4",
+        "react": "^19.2.3",
+        "react-dom": "^19.2.3",
+        "react-hook-form": "^7.71.1",
+        "swr": "^2.3.8"
+    },
+    "devDependencies": {
+        "@types/node": "^25.0.9",
+        "@types/react": "^19.2.8",
+        "@types/react-dom": "^19.2.3",
+        "eslint": "^9.39.2",
+        "eslint-config-next": "16.1.4",
+        "typescript": "^5.9.3"
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "name": "pacs-track",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Rice Miller PACS SaaS - Gate Entry Management System",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev:backend": "npm run dev --workspace=@pacs-track/backend",
+        "dev:frontend": "npm run dev --workspace=@pacs-track/frontend",
+        "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+        "build:backend": "npm run build --workspace=@pacs-track/backend",
+        "build:frontend": "npm run build --workspace=@pacs-track/frontend",
+        "build": "npm run build --workspaces --if-present",
+        "db:generate": "npm run generate --workspace=@pacs-track/database",
+        "db:push": "npm run push --workspace=@pacs-track/database",
+        "db:migrate": "npm run migrate --workspace=@pacs-track/database",
+        "db:studio": "npm run studio --workspace=@pacs-track/database"
+    },
+    "devDependencies": {
+        "concurrently": "^9.2.1",
+        "turbo": "^2.7.5"
+    }
+}

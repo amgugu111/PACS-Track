@@ -1,0 +1,31 @@
+services:
+  # Backend API (NestJS)
+  - type: web
+    name: pacs-track-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && cd apps/backend && npm run build
+    startCommand: cd apps/backend && npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+  # Frontend (Next.js)
+  - type: web
+    name: pacs-track-frontend
+    runtime: node
+    plan: free
+    buildCommand: npm install && cd apps/frontend && npm run build
+    startCommand: cd apps/frontend && npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NODE_ENV
+        value: production

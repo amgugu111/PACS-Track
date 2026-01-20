@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Rice Mill Model (Multi-tenancy)
+model RiceMill {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  licenseNo   String?  @unique
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  users           User[]
+  districts       District[]
+  societies       Society[]
+  gatePassEntries GatePassEntry[]
+
+  @@map("rice_mills")
+}
+
+// User Model (Authentication)
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String   // Hashed password
+  name       String
+  role       UserRole @default(OPERATOR)
+  riceMillId String?  // Optional for SUPER_ADMIN
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  riceMill RiceMill? @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+
+  @@index([riceMillId])
+  @@map("users")
+}
+
+enum UserRole {
+  SUPER_ADMIN // Platform admin - manages all rice mills
+  ADMIN       // Full access to rice mill
+  MANAGER     // Can view and create entries
+  OPERATOR    // Can only create entries
+}
+
+// District Model
+model District {
+  id         String   @id @default(cuid())
+  name       String
+  code       String?  @unique
+  state      String?
+  riceMillId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  riceMill        RiceMill        @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  societies       Society[]
+  gatePassEntries GatePassEntry[]
+
+  @@unique([name, riceMillId])
+  @@index([riceMillId])
+  @@map("districts")
+}
+
+// Society (PACS) Model
+model Society {
+  id         String   @id @default(cuid())
+  name       String
+  code       String
+  districtId String
+  riceMillId String
+  address    String?
+  contactNo  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  riceMill        RiceMill        @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  district        District        @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  farmers         Farmer[]
+  gatePassEntries GatePassEntry[]
+
+  @@unique([code, riceMillId])
+  @@index([riceMillId])
+  @@map("societies")
+}
+
+// Farmer Model
+model Farmer {
+  id         String   @id @default(cuid())
+  name       String
+  fatherName String?
+  phone      String?
+  address    String?
+  societyId  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  society         Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  gatePassEntries GatePassEntry[]
+
+  @@map("farmers")
+}
+
+// Gate Pass Entry Model (Core Model for Gate Entry Module)
+model GatePassEntry {
+  id         String   @id @default(cuid())
+  tokenNo    String   // Manual Gatepass Number
+  challanNo  String
+  date       DateTime @default(now())
+  truckNo    String
+  totalQty   Float // in Quintals/Kg
+  totalBags  Int
+  remarks    String? // Optional - for "other info"
+  
+  // Foreign Keys
+  riceMillId String
+  societyId  String
+  farmerId   String
+  districtId String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relationships
+  riceMill RiceMill @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  society  Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  farmer   Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  district District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenNo, riceMillId])
+  @@index([tokenNo])
+  @@index([date])
+  @@index([riceMillId])
+  @@index([societyId])
+  @@index([farmerId])
+  @@map("gate_pass_entries")
+}
