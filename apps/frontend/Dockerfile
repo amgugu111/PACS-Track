@@ -33,8 +33,9 @@ COPY --from=builder /app/apps/frontend/public ./public
 COPY --from=builder /app/apps/frontend/package*.json ./
 COPY --from=builder /app/apps/frontend/next.config.js ./
 
-# Install production dependencies
-RUN npm install --production
+# Copy node_modules from builder (includes workspace packages)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/frontend/node_modules ./node_modules
 
 EXPOSE 3000
 
