@@ -12,7 +12,7 @@ services:
     # Build: install all deps (including dev deps for TypeScript compilation), generate Prisma client, run migrations, build backend
     buildCommand: npm ci --include=dev && npx prisma generate --schema=packages/database/prisma/schema.prisma && npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && npm run build:backend
     # Start the application in production mode
-    startCommand: cd apps/backend && node dist/main.js
+    startCommand: node apps/backend/dist/main.js
     # Health check endpoint for monitoring
     healthCheckPath: /health
     envVars:
