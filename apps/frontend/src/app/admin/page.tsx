@@ -140,7 +140,7 @@ export default function AdminDashboard() {
                 ) : (
                     <Grid container spacing={3}>
                         {riceMills.map((mill) => (
-                            <Grid item xs={12} md={6} key={mill.id}>
+                            <Grid size={{ xs: 12, md: 6 }} key={mill.id}>
                                 <Card>
                                     <CardContent>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
@@ -193,12 +193,12 @@ export default function AdminDashboard() {
                     <DialogTitle>Create New Rice Mill</DialogTitle>
                     <DialogContent>
                         <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
                                     Rice Mill Details
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     fullWidth
                                     label="Rice Mill Name"
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     fullWidth
                                     label="Email"
@@ -215,7 +215,7 @@ export default function AdminDashboard() {
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     fullWidth
                                     label="Phone"
@@ -223,7 +223,7 @@ export default function AdminDashboard() {
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     fullWidth
                                     label="License Number"
@@ -231,7 +231,7 @@ export default function AdminDashboard() {
                                     onChange={(e) => setFormData({ ...formData, licenseNo: e.target.value })}
                                 />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <TextField
                                     fullWidth
                                     label="Address"
@@ -242,12 +242,12 @@ export default function AdminDashboard() {
                                 />
                             </Grid>
 
-                            <Grid item xs={12} sx={{ mt: 2 }}>
+                            <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
                                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
                                     Admin User Details
                                 </Typography>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     fullWidth
                                     label="Admin Name"
@@ -255,7 +255,7 @@ export default function AdminDashboard() {
                                     onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
                                 />
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <TextField
                                     fullWidth
                                     label="Admin Email"
@@ -264,7 +264,7 @@ export default function AdminDashboard() {
                                     onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
                                 />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid size={{ xs: 12 }}>
                                 <TextField
                                     fullWidth
                                     label="Admin Password"

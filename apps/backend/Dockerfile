@@ -14,10 +14,11 @@ COPY apps/backend ./apps/backend
 # Install dependencies
 RUN npm install
 
-# Build packages
+# Generate Prisma Client
 WORKDIR /app/packages/database
-RUN npm run build
+RUN npx prisma generate
 
+# Build shared-types
 WORKDIR /app/packages/shared-types
 RUN npm run build
 
@@ -43,7 +44,7 @@ COPY --from=builder /app/apps/backend/package*.json ./
 # Install production dependencies only
 RUN npm install --production
 
-# Generate Prisma Client
+# Generate Prisma Client for production
 WORKDIR /app/packages/database
 RUN npx prisma generate
 

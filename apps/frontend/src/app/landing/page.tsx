@@ -18,7 +18,7 @@ export default function LandingPage() {
             >
                 <Container maxWidth="lg">
                     <Grid container spacing={4} alignItems="center">
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="h2" fontWeight="bold" gutterBottom>
                                 PACS Track
                             </Typography>
@@ -59,7 +59,7 @@ export default function LandingPage() {
                                 </Button>
                             </Box>
                         </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Box
                                 sx={{
                                     bgcolor: 'rgba(255,255,255,0.1)',
@@ -91,7 +91,7 @@ export default function LandingPage() {
                 </Typography>
 
                 <Grid container spacing={4}>
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{ height: '100%', boxShadow: 3 }}>
                             <CardContent>
                                 <Typography variant="h4" gutterBottom>
@@ -108,7 +108,7 @@ export default function LandingPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{ height: '100%', boxShadow: 3 }}>
                             <CardContent>
                                 <Typography variant="h4" gutterBottom>
@@ -125,7 +125,7 @@ export default function LandingPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{ height: '100%', boxShadow: 3 }}>
                             <CardContent>
                                 <Typography variant="h4" gutterBottom>
@@ -142,7 +142,7 @@ export default function LandingPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{ height: '100%', boxShadow: 3 }}>
                             <CardContent>
                                 <Typography variant="h4" gutterBottom>
@@ -159,7 +159,7 @@ export default function LandingPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{ height: '100%', boxShadow: 3 }}>
                             <CardContent>
                                 <Typography variant="h4" gutterBottom>
@@ -176,7 +176,7 @@ export default function LandingPage() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Card sx={{ height: '100%', boxShadow: 3 }}>
                             <CardContent>
                                 <Typography variant="h4" gutterBottom>
@@ -221,7 +221,7 @@ export default function LandingPage() {
             <Box sx={{ bgcolor: 'grey.900', color: 'white', py: 4 }}>
                 <Container maxWidth="lg">
                     <Grid container spacing={4}>
-                        <Grid item xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Typography variant="h6" fontWeight="bold" gutterBottom>
                                 PACS Track
                             </Typography>
@@ -229,7 +229,7 @@ export default function LandingPage() {
                                 Professional rice mill management system for the digital age.
                             </Typography>
                         </Grid>
-                        <Grid item xs={12} md={6} textAlign={{ xs: 'left', md: 'right' }}>
+                        <Grid size={{ xs: 12, md: 6 }} textAlign={{ xs: 'left', md: 'right' }}>
                             <Typography variant="body2" color="grey.400">
                                 © 2026 PACS Track. All rights reserved.
                             </Typography>

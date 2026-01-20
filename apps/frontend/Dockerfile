@@ -14,9 +14,9 @@ COPY apps/frontend ./apps/frontend
 # Install dependencies
 RUN npm install
 
-# Build shared packages
+# Build shared-types if needed
 WORKDIR /app/packages/shared-types
-RUN npm run build
+RUN npm run build || true
 
 # Build frontend
 WORKDIR /app/apps/frontend

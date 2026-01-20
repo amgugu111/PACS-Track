@@ -179,7 +179,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                 <Box component="form" onSubmit={handleSubmit}>
                     <Grid container spacing={3}>
                         {/* Token Number */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 required
@@ -192,7 +192,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Challan Number */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 required
@@ -204,7 +204,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Date Picker */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <DatePicker
                                 label="Date"
                                 value={date}
@@ -220,7 +220,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Truck Number */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 required
@@ -232,7 +232,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Society Selection */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <Autocomplete
                                 options={societies}
                                 getOptionLabel={(option) => `${option.name} (${option.code})`}
@@ -264,7 +264,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* District (Auto-filled, Read-only) */}
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 label="District"
@@ -278,7 +278,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Farmer Search (Smart Autocomplete with freeSolo) */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Autocomplete
                                 freeSolo
                                 options={farmerOptions}
@@ -329,7 +329,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Total Quantity */}
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 required
@@ -343,7 +343,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Total Bags */}
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 required
@@ -356,7 +356,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Qty Per Bag (Calculated, Read-only) */}
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
                                 label="Qty Per Bag"
@@ -375,7 +375,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Remarks */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth
                                 multiline
@@ -389,7 +389,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         </Grid>
 
                         {/* Submit Button */}
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                                 <Button
                                     type="button"
