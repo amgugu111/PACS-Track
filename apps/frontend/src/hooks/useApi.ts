@@ -1,5 +1,6 @@
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { apiClient } from '../lib/api-client';
+import { staticDataConfig, dynamicDataConfig } from '../lib/swr-config';
 import type {
     CreateGateEntryDto,
     GateEntryResponse,
@@ -44,7 +45,7 @@ export function useGateEntries(filters?: {
         page: number;
         limit: number;
         totalPages: number;
-    }>(url, fetcher);
+    }>(url, fetcher, dynamicDataConfig);
 
     return {
         entries: data?.data || [],
@@ -71,16 +72,20 @@ export function useGateEntry(id: string) {
 
 export async function createGateEntry(dto: CreateGateEntryDto) {
     const response = await apiClient.post<GateEntryResponse>('/gate-entries', dto);
+    // Invalidate gate entries and analytics
+    await globalMutate((key) => typeof key === 'string' && (key.startsWith('/gate-entries') || key.startsWith('/analytics')));
     return response.data;
 }
 
 export async function updateGateEntry(id: string, dto: Partial<CreateGateEntryDto>) {
     const response = await apiClient.put<GateEntryResponse>(`/gate-entries/${id}`, dto);
+    await globalMutate((key) => typeof key === 'string' && (key.startsWith('/gate-entries') || key.startsWith('/analytics')));
     return response.data;
 }
 
 export async function deleteGateEntry(id: string) {
     const response = await apiClient.delete(`/gate-entries/${id}`);
+    await globalMutate((key) => typeof key === 'string' && (key.startsWith('/gate-entries') || key.startsWith('/analytics')));
     return response.data;
 }
 
@@ -88,7 +93,7 @@ export async function deleteGateEntry(id: string) {
 
 export function useSocieties(districtId?: string) {
     const url = districtId ? `/societies?districtId=${districtId}` : '/societies';
-    const { data, error, mutate } = useSWR<SocietyResponse[]>(url, fetcher);
+    const { data, error, mutate } = useSWR<SocietyResponse[]>(url, fetcher, staticDataConfig);
 
     return {
         societies: data || [],
@@ -118,6 +123,8 @@ export async function createSociety(data: {
     contactNo?: string;
 }) {
     const response = await apiClient.post('/societies', data);
+    // Invalidate all societies cache
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/societies'));
     return response.data;
 }
 
@@ -128,11 +135,13 @@ export async function updateSociety(id: string, data: {
     contactNo?: string;
 }) {
     const response = await apiClient.put(`/societies/${id}`, data);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/societies'));
     return response.data;
 }
 
 export async function deleteSociety(id: string) {
     const response = await apiClient.delete(`/societies/${id}`);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/societies'));
     return response.data;
 }
 
@@ -166,6 +175,7 @@ export async function createParty(data: {
     societyId: string;
 }) {
     const response = await apiClient.post('/parties', data);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/parties'));
     return response.data;
 }
 
@@ -177,18 +187,20 @@ export async function updateParty(id: string, data: {
     societyId?: string;
 }) {
     const response = await apiClient.put(`/parties/${id}`, data);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/parties'));
     return response.data;
 }
 
 export async function deleteParty(id: string) {
     const response = await apiClient.delete(`/parties/${id}`);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/parties'));
     return response.data;
 }
 
 // ============ District Hooks ============
 
 export function useDistricts() {
-    const { data, error, mutate } = useSWR<DistrictResponse[]>('/districts', fetcher);
+    const { data, error, mutate } = useSWR<DistrictResponse[]>('/districts', fetcher, staticDataConfig);
 
     return {
         districts: data || [],
@@ -200,23 +212,26 @@ export function useDistricts() {
 
 export async function createDistrict(data: { name: string; state?: string }) {
     const response = await apiClient.post('/districts', data);
+    await globalMutate('/districts');
     return response.data;
 }
 
 export async function updateDistrict(id: string, data: { name?: string; state?: string }) {
     const response = await apiClient.put(`/districts/${id}`, data);
+    await globalMutate('/districts');
     return response.data;
 }
 
 export async function deleteDistrict(id: string) {
     const response = await apiClient.delete(`/districts/${id}`);
+    await globalMutate('/districts');
     return response.data;
 }
 
 // ============ Season Hooks ============
 
 export function useSeasons() {
-    const { data, error, mutate } = useSWR<SeasonResponse[]>('/seasons', fetcher);
+    const { data, error, mutate } = useSWR<SeasonResponse[]>('/seasons', fetcher, staticDataConfig);
 
     return {
         seasons: data || [],
@@ -227,7 +242,7 @@ export function useSeasons() {
 }
 
 export function useActiveSeason() {
-    const { data, error, mutate } = useSWR<SeasonResponse>('/seasons/active', fetcher);
+    const { data, error, mutate } = useSWR<SeasonResponse>('/seasons/active', fetcher, staticDataConfig);
 
     return {
         activeSeason: data,
@@ -239,21 +254,31 @@ export function useActiveSeason() {
 
 export async function createSeason(data: CreateSeasonDto) {
     const response = await apiClient.post('/seasons', data);
+    await globalMutate('/seasons');
+    await globalMutate('/seasons/active');
     return response.data;
 }
 
 export async function updateSeason(id: string, data: Partial<CreateSeasonDto>) {
     const response = await apiClient.put(`/seasons/${id}`, data);
+    await globalMutate('/seasons');
+    await globalMutate('/seasons/active');
     return response.data;
 }
 
 export async function activateSeason(id: number | string) {
     const response = await apiClient.patch(`/seasons/${id}/activate`);
+    await globalMutate('/seasons');
+    await globalMutate('/seasons/active');
+    // Also refresh analytics since active season changed
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/analytics'));
     return response.data;
 }
 
 export async function deleteSeason(id: number | string) {
     const response = await apiClient.delete(`/seasons/${id}`);
+    await globalMutate('/seasons');
+    await globalMutate('/seasons/active');
     return response.data;
 }
 
@@ -271,7 +296,7 @@ export async function getSeasonTargets(seasonId: number | string) {
 
 export function useDashboardStats(seasonId?: string | number) {
     const url = seasonId ? `/analytics/dashboard?seasonId=${seasonId}` : null;
-    const { data, error, mutate } = useSWR<DashboardStats>(url, fetcher);
+    const { data, error, mutate } = useSWR<DashboardStats>(url, fetcher, dynamicDataConfig);
 
     return {
         stats: data,

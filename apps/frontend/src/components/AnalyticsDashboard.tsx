@@ -119,7 +119,7 @@ export default function AnalyticsDashboard() {
                         variant="contained"
                         size="large"
                         startIcon={<Add />}
-                        onClick={() => router.push('/dashboard/gate-entry')}
+                        onClick={() => router.push('/dashboard?tab=new-entry')}
                     >
                         Add New Entry
                     </Button>

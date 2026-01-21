@@ -65,15 +65,22 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                     setPartyOptions(results);
                 } catch (err) {
                     console.error('Error searching parties:', err);
-                    setPartyOptions(parties);
+                    setPartyOptions(parties || []);
                 }
             }, 300);
 
             return () => clearTimeout(delayDebounceFn);
-        } else {
+        } else if (parties) {
             setPartyOptions(parties);
         }
-    }, [partyInputValue, selectedSociety, parties]);
+    }, [partyInputValue, selectedSociety?.id]);
+
+    // Update party options when parties data changes
+    useEffect(() => {
+        if (parties && partyInputValue.trim().length === 0) {
+            setPartyOptions(parties);
+        }
+    }, [parties]);
 
     // Validate Indian vehicle number format
     const validateVehicleNumber = (value: string): boolean => {

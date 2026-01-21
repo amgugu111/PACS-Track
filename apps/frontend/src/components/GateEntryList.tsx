@@ -61,7 +61,10 @@ export default function GateEntryList({ onEdit }: GateEntryListProps) {
     // Preselect active season
     useEffect(() => {
         if (activeSeason && selectedSeasonId === 'all') {
-            setSelectedSeasonId(Number(activeSeason.id));
+            const seasonId = parseInt(activeSeason.id, 10);
+            if (!isNaN(seasonId)) {
+                setSelectedSeasonId(seasonId);
+            }
         }
     }, [activeSeason, selectedSeasonId]);
 

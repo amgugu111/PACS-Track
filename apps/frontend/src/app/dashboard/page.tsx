@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Container, Typography, AppBar, Toolbar, Button, Tabs, Tab } from '@mui/material';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import GateEntryForm from '@/components/GateEntryForm';
@@ -17,10 +17,44 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function DashboardPage() {
     const { user, logout } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(0);
+
+    // Tab ID mapping
+    const tabMap: Record<string, number> = {
+        'analytics': 0,
+        'new-entry': 1,
+        'entries': 2,
+        'seasons': 3,
+        'targets': 4,
+        'societies': 5,
+        'parties': 6,
+        'reports': 7,
+    };
+
+    const tabIdMap: Record<number, string> = {
+        0: 'analytics',
+        1: 'new-entry',
+        2: 'entries',
+        3: 'seasons',
+        4: 'targets',
+        5: 'societies',
+        6: 'parties',
+        7: 'reports',
+    };
+
+    // Initialize tab from URL
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && tabMap[tab] !== undefined) {
+            setActiveTab(tabMap[tab]);
+        }
+    }, [searchParams]);
 
     const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
         setActiveTab(newValue);
+        // Update URL without page reload
+        router.push(`/dashboard?tab=${tabIdMap[newValue]}`, { scroll: false });
     };
 
     return (
@@ -55,7 +89,7 @@ export default function DashboardPage() {
 
             <Container maxWidth="xl" sx={{ py: 4 }}>
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                    <Tabs value={activeTab} onChange={handleTabChange} centered variant="scrollable" scrollButtons="auto">
+                    <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
                         <Tab label="Analytics Dashboard" />
                         <Tab label="New Entry" />
                         <Tab label="View All Entries" />

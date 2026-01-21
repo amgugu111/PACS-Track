@@ -38,10 +38,13 @@ export default function TargetSetting() {
 
     // Preselect active season
     useEffect(() => {
-        if (activeSeason && !selectedSeason) {
-            setSelectedSeason(Number(activeSeason.id));
+        if (activeSeason && selectedSeason === '') {
+            const seasonId = parseInt(activeSeason.id, 10);
+            if (!isNaN(seasonId)) {
+                setSelectedSeason(seasonId);
+            }
         }
-    }, [activeSeason, selectedSeason]);
+    }, [activeSeason]);
 
     useEffect(() => {
         if (selectedSeason) {
