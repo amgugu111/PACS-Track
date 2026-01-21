@@ -131,7 +131,7 @@ export default function TargetSetting() {
                 {selectedSeason && !loading && (
                     <Alert severity="info" sx={{ mb: 2 }}>
                         Set procurement targets for each society in quintals.
-                        Total Target: <strong>{totalTarget.toLocaleString()} quintal</strong> ({(totalTarget / 10).toFixed(1)} tonnes)
+                        Total Target: <strong>{totalTarget.toLocaleString()} quintal</strong>
                     </Alert>
                 )}
             </Paper>

@@ -74,16 +74,16 @@ export class GateEntryController {
         if (format === 'pdf') {
             // Generate PDF file
             const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
-            
+
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.pdf"`);
-            
+
             doc.pipe(res);
 
             // Add title
             doc.fontSize(16).font('Helvetica-Bold').text(`${reportType.toUpperCase()} REPORT`, { align: 'center' });
             doc.moveDown();
-            
+
             // Add date range
             doc.fontSize(10).font('Helvetica').text(`Period: ${fromDate} to ${toDate}`, { align: 'center' });
             doc.moveDown(2);
@@ -110,7 +110,7 @@ export class GateEntryController {
             data.forEach((row, index) => {
                 xPos = 30;
                 const startY = doc.y;
-                
+
                 // Check if we need a new page
                 if (doc.y > doc.page.height - 100) {
                     doc.addPage();
@@ -121,7 +121,7 @@ export class GateEntryController {
                     doc.text(value, xPos, startY, { width: columnWidth, align: 'left', height: 20 });
                     xPos += columnWidth;
                 });
-                
+
                 doc.moveDown(0.3);
 
                 // Add subtle line between rows

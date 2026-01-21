@@ -158,10 +158,10 @@ export default function AnalyticsDashboard() {
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight="bold">
-                                {(stats.overall.totalTarget / 1000).toFixed(1)}
+                                {stats.overall.totalTarget.toLocaleString()}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Tonnes
+                                Quintal
                             </Typography>
                         </CardContent>
                     </Card>
@@ -177,10 +177,10 @@ export default function AnalyticsDashboard() {
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight="bold" color="success.main">
-                                {(stats.overall.totalAchieved / 1000).toFixed(1)}
+                                {stats.overall.totalAchieved.toLocaleString()}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Tonnes
+                                Quintal
                             </Typography>
                         </CardContent>
                     </Card>
@@ -196,10 +196,10 @@ export default function AnalyticsDashboard() {
                                 </Typography>
                             </Box>
                             <Typography variant="h4" fontWeight="bold" color="warning.main">
-                                {(stats.overall.totalRemaining / 1000).toFixed(1)}
+                                {stats.overall.totalRemaining.toLocaleString()}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Tonnes
+                                Quintal
                             </Typography>
                         </CardContent>
                     </Card>
