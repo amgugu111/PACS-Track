@@ -16,8 +16,6 @@ import { PrismaModule } from '../prisma/prisma.module';
             inject: [ConfigService],
             useFactory: async (configService: ConfigService) => {
                 const secret = configService.get<string>('JWT_SECRET') || 'your-secret-key-change-in-production';
-                console.log('📦 AuthModule: JWT_SECRET length for signing:', secret.length);
-                console.log('📦 AuthModule: JWT_SECRET preview:', secret.substring(0, 20) + '...');
                 return {
                     secret,
                     signOptions: { expiresIn: '7d' },

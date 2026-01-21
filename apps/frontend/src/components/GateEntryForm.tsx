@@ -33,7 +33,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const [partyName, setPartyName] = useState(''); // Name of the Party
     const [vehicleNo, setVehicleNo] = useState(''); // Vehicle Number
     const [bags, setBags] = useState<number | ''>(''); // Number of Bags
-    const [quantity, setQuantity] = useState<number | ''>(''); // Quantity in kg
+    const [quantity, setQuantity] = useState<number | ''>(''); // Quantity in quintal
     const [remarks, setRemarks] = useState('');
     const [vehicleNoError, setVehicleNoError] = useState('');
     const [selectedSociety, setSelectedSociety] = useState<SocietyResponse | null>(null);
@@ -114,7 +114,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
             return;
         }
         if (!quantity || Number(quantity) <= 0) {
-            setError('Quantity must be greater than 0 kg');
+            setError('Quantity must be greater than 0 quintal');
             return;
         }
 
@@ -366,11 +366,11 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 fullWidth
                                 required
                                 type="number"
-                                label="Quantity (kg)"
+                                label="Quantity (quintal)"
                                 value={quantity}
                                 onChange={(e) => setQuantity(e.target.value ? Number(e.target.value) : '')}
                                 inputProps={{ min: 0.01, step: 0.01 }}
-                                helperText="Quantity in kilograms (kg)"
+                                helperText="Quantity in quintals"
                             />
                         </Grid>
 
@@ -378,12 +378,12 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
-                                label="Qty Per Bag (kg)"
+                                label="Qty Per Bag (quintal)"
                                 value={qtyPerBag}
                                 InputProps={{
                                     readOnly: true,
                                 }}
-                                helperText="Auto-calculated (kg per bag)"
+                                helperText="Auto-calculated (quintal per bag)"
                                 sx={{
                                     '& .MuiInputBase-input': {
                                         fontWeight: 'bold',

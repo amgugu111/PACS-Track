@@ -157,6 +157,7 @@ export default function SocietyManagement() {
                 <Table>
                     <TableHead>
                         <TableRow>
+                            <TableCell><strong>#</strong></TableCell>
                             <TableCell>PACS Code</TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell>District</TableCell>
@@ -166,8 +167,9 @@ export default function SocietyManagement() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {societies?.map((society: any) => (
+                        {societies?.map((society: any, index: number) => (
                             <TableRow key={society.id}>
+                                <TableCell>{index + 1}</TableCell>
                                 <TableCell>{society.code}</TableCell>
                                 <TableCell>{society.name}</TableCell>
                                 <TableCell>{society.district?.name || '-'}</TableCell>

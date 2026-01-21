@@ -39,14 +39,16 @@ export default function DistrictManagement() {
                 <Table>
                     <TableHead>
                         <TableRow>
+                            <TableCell><strong>#</strong></TableCell>
                             <TableCell>Code</TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell>State</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {districts?.map((district: any) => (
+                        {districts?.map((district: any, index: number) => (
                             <TableRow key={district.id}>
+                                <TableCell>{index + 1}</TableCell>
                                 <TableCell>{district.code}</TableCell>
                                 <TableCell>{district.name}</TableCell>
                                 <TableCell>{district.state || '-'}</TableCell>
@@ -54,7 +56,7 @@ export default function DistrictManagement() {
                         ))}
                         {(!districts || districts.length === 0) && (
                             <TableRow>
-                                <TableCell colSpan={3} align="center">
+                                <TableCell colSpan={4} align="center">
                                     No districts found
                                 </TableCell>
                             </TableRow>

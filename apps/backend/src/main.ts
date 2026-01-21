@@ -4,12 +4,6 @@ import { AppModule } from './app.module';
 import { LoggingInterceptor } from './common/logging.interceptor';
 
 async function bootstrap() {
-    console.log('🔧 Environment check:');
-    console.log('   JWT_SECRET length:', process.env.JWT_SECRET?.length || 'NOT SET');
-    console.log('   JWT_SECRET preview:', process.env.JWT_SECRET?.substring(0, 20) + '...' || 'NOT SET');
-    console.log('   DATABASE_URL set:', !!process.env.DATABASE_URL);
-    console.log('');
-
     const app = await NestFactory.create(AppModule);
 
     // Enable request/response logging

@@ -257,7 +257,7 @@ export default function AnalyticsDashboard() {
                             textAnchor="end"
                             height={100}
                         />
-                        <YAxis label={{ value: 'Quantity (kg)', angle: -90, position: 'insideLeft' }} />
+                        <YAxis label={{ value: 'Quantity (quintal)', angle: -90, position: 'insideLeft' }} />
                         <Tooltip />
                         <Legend />
                         <Bar dataKey="target" fill="#2196f3" name="Target" />
@@ -275,17 +275,19 @@ export default function AnalyticsDashboard() {
                     <Table>
                         <TableHead>
                             <TableRow>
+                                <TableCell><strong>#</strong></TableCell>
                                 <TableCell><strong>Society</strong></TableCell>
                                 <TableCell><strong>District</strong></TableCell>
-                                <TableCell align="right"><strong>Target (kg)</strong></TableCell>
-                                <TableCell align="right"><strong>Achieved (kg)</strong></TableCell>
+                                <TableCell align="right"><strong>Target (quintal)</strong></TableCell>
+                                <TableCell align="right"><strong>Achieved (quintal)</strong></TableCell>
                                 <TableCell align="right"><strong>Progress</strong></TableCell>
                                 <TableCell align="right"><strong>Entries</strong></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {stats.societyStats.slice(0, 15).map((society: any) => (
+                            {stats.societyStats.slice(0, 15).map((society: any, index: number) => (
                                 <TableRow key={society.societyId}>
+                                    <TableCell>{index + 1}</TableCell>
                                     <TableCell>{society.societyName}</TableCell>
                                     <TableCell>{society.district}</TableCell>
                                     <TableCell align="right">{society.target.toLocaleString()}</TableCell>
@@ -326,7 +328,7 @@ export default function AnalyticsDashboard() {
                                 <TableCell><strong>Date</strong></TableCell>
                                 <TableCell><strong>Society</strong></TableCell>
                                 <TableCell><strong>District</strong></TableCell>
-                                <TableCell align="right"><strong>Quantity (kg)</strong></TableCell>
+                                <TableCell align="right"><strong>Quantity (quintal)</strong></TableCell>
                                 <TableCell align="right"><strong>Bags</strong></TableCell>
                             </TableRow>
                         </TableHead>

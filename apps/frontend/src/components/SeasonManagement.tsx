@@ -155,6 +155,7 @@ export default function SeasonManagement() {
                 <Table>
                     <TableHead>
                         <TableRow>
+                            <TableCell><strong>#</strong></TableCell>
                             <TableCell><strong>Name</strong></TableCell>
                             <TableCell><strong>Type</strong></TableCell>
                             <TableCell><strong>Status</strong></TableCell>
@@ -162,8 +163,9 @@ export default function SeasonManagement() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {seasons?.map((season: any) => (
+                        {seasons?.map((season: any, index: number) => (
                             <TableRow key={season.id}>
+                                <TableCell>{index + 1}</TableCell>
                                 <TableCell>{season.name}</TableCell>
                                 <TableCell>
                                     <Chip

@@ -130,8 +130,8 @@ export default function TargetSetting() {
 
                 {selectedSeason && !loading && (
                     <Alert severity="info" sx={{ mb: 2 }}>
-                        Set procurement targets for each society in kilograms (kg).
-                        Total Target: <strong>{totalTarget.toLocaleString()} kg</strong> ({(totalTarget / 1000).toFixed(1)} tonnes)
+                        Set procurement targets for each society in quintals.
+                        Total Target: <strong>{totalTarget.toLocaleString()} quintal</strong> ({(totalTarget / 10).toFixed(1)} tonnes)
                     </Alert>
                 )}
             </Paper>
@@ -148,14 +148,16 @@ export default function TargetSetting() {
                         <Table>
                             <TableHead>
                                 <TableRow>
+                                    <TableCell><strong>#</strong></TableCell>
                                     <TableCell><strong>Society Name</strong></TableCell>
                                     <TableCell><strong>District</strong></TableCell>
-                                    <TableCell align="right"><strong>Target Quantity (kg)</strong></TableCell>
+                                    <TableCell align="right"><strong>Target Quantity (quintal)</strong></TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {targets.map((target) => (
+                                {targets.map((target, index) => (
                                     <TableRow key={target.societyId}>
+                                        <TableCell>{index + 1}</TableCell>
                                         <TableCell>{target.society?.name || 'Unknown'}</TableCell>
                                         <TableCell>{target.society?.district?.name || 'Unknown'}</TableCell>
                                         <TableCell align="right">

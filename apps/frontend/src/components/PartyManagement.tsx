@@ -160,6 +160,7 @@ export default function PartyManagement() {
                 <Table>
                     <TableHead>
                         <TableRow>
+                            <TableCell><strong>#</strong></TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell>Father's Name</TableCell>
                             <TableCell>Phone Number</TableCell>
@@ -169,8 +170,9 @@ export default function PartyManagement() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {parties?.map((party: any) => (
+                        {parties?.map((party: any, index: number) => (
                             <TableRow key={party.id}>
+                                <TableCell>{index + 1}</TableCell>
                                 <TableCell>{party.name}</TableCell>
                                 <TableCell>{party.fatherName || '-'}</TableCell>
                                 <TableCell>{party.phoneNumber || '-'}</TableCell>
