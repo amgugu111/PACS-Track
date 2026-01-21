@@ -4,7 +4,7 @@ services:
     name: pacs-track-backend
     runtime: node
     env: node
-    region: oregon
+    region: singapore
     plan: free
     branch: main
     # Auto-deploy on every push to main branch
