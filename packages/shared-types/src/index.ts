@@ -4,7 +4,7 @@ export interface CreateGateEntryDto {
     tokenNo: string;
     date?: Date | string;
     partyName: string; // Name of the Party
-    vehicleType: 'tractor' | 'truck' | 'tata_ace'; // Type of Vehicle
+    vehicleType: 'TRACTOR' | 'TRUCK' | 'TATA_ACE'; // Type of Vehicle
     vehicleNo?: string; // Vehicle Number (optional for tractor)
     bags: number; // Number of Bags
     quantity: number; // Quantity in Quintals/Kg
@@ -17,7 +17,7 @@ export interface UpdateGateEntryDto {
     tokenNo?: string;
     date?: Date | string;
     partyName?: string;
-    vehicleType?: 'tractor' | 'truck' | 'tata_ace';
+    vehicleType?: 'TRACTOR' | 'TRUCK' | 'TATA_ACE';
     vehicleNo?: string;
     bags?: number;
     quantity?: number;

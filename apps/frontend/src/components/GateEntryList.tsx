@@ -365,7 +365,7 @@ function EditEntryDialog({ open, entry, onClose, onSuccess, onError }: EditEntry
         if (entry) {
             setTokenNo(entry.tokenNo);
             setPartyName(entry.partyName);
-            setVehicleNo(entry.vehicleNo);
+            setVehicleNo(entry.vehicleNo || '');
             setBags(entry.bags);
             setQuantity(entry.quantity);
             setRemarks(entry.remarks || '');

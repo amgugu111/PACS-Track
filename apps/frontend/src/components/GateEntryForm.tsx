@@ -32,7 +32,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const [tokenNo, setTokenNo] = useState('');
     const [date, setDate] = useState<Date | null>(new Date());
     const [partyName, setPartyName] = useState(''); // Name of the Party
-    const [vehicleType, setVehicleType] = useState<'tractor' | 'truck' | 'tata_ace'>('truck');
+    const [vehicleType, setVehicleType] = useState<'TRACTOR' | 'TRUCK' | 'TATA_ACE'>('TRUCK');
     const [vehicleNo, setVehicleNo] = useState(''); // Vehicle Number
     const [bags, setBags] = useState<number | ''>(''); // Number of Bags
     const [quantity, setQuantity] = useState<number | ''>(''); // Quantity in quintal
@@ -101,11 +101,15 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
             setError('Token number is required');
             return;
         }
-        if (!vehicleNo.trim()) {
-            setError('Vehicle number is required');
+
+        // Vehicle number is required for truck and tata ace, optional for tractor
+        if (vehicleType !== 'TRACTOR' && !vehicleNo.trim()) {
+            setError('Vehicle number is required for truck and tata ace');
+            setLoading(false);
             return;
         }
-        if (!validateVehicleNumber(vehicleNo.trim())) {
+
+        if (vehicleNo && !validateVehicleNumber(vehicleNo.trim())) {
             setError('Vehicle number must be in Indian format (e.g., OD01AB1234, MH12DE5678)');
             setVehicleNoError('Invalid Indian vehicle number format');
             return;
@@ -134,7 +138,8 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                 tokenNo: tokenNo.trim(),
                 date: date?.toISOString() || new Date().toISOString(),
                 partyName: partyName.trim(),
-                vehicleNo: vehicleNo.trim().toUpperCase(),
+                vehicleType: vehicleType,
+                vehicleNo: vehicleNo ? vehicleNo.trim().toUpperCase() : undefined,
                 bags: Number(bags),
                 quantity: Number(quantity),
                 remarks: remarks.trim() || undefined,
@@ -165,7 +170,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
         setTokenNo('');
         setDate(new Date());
         setPartyName('');
-        setVehicleType('truck');
+        setVehicleType('TRUCK');
         setVehicleNo('');
         setBags('');
         setQuantity('');
@@ -341,17 +346,17 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 label="Vehicle Type"
                                 value={vehicleType}
                                 onChange={(e) => {
-                                    setVehicleType(e.target.value as 'tractor' | 'truck' | 'tata_ace');
+                                    setVehicleType(e.target.value as 'TRACTOR' | 'TRUCK' | 'TATA_ACE');
                                     // Clear vehicle number and error when switching to tractor
-                                    if (e.target.value === 'tractor') {
+                                    if (e.target.value === 'TRACTOR') {
                                         setVehicleNo('');
                                         setVehicleNoError('');
                                     }
                                 }}
                             >
-                                <MenuItem value="truck">Truck</MenuItem>
-                                <MenuItem value="tractor">Tractor</MenuItem>
-                                <MenuItem value="tata_ace">Tata Ace</MenuItem>
+                                <MenuItem value="TRUCK">Truck</MenuItem>
+                                <MenuItem value="TRACTOR">Tractor</MenuItem>
+                                <MenuItem value="TATA_ACE">Tata Ace</MenuItem>
                             </TextField>
                         </Grid>
 
@@ -359,7 +364,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
-                                required={vehicleType !== 'tractor'}
+                                required={vehicleType !== 'TRACTOR'}
                                 label="Vehicle Number"
                                 value={vehicleNo}
                                 onChange={(e) => {
@@ -373,7 +378,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 }}
                                 placeholder="e.g., OD01AB1234"
                                 error={!!vehicleNoError}
-                                helperText={vehicleNoError || (vehicleType === 'tractor' ? 'Optional for tractor' : 'Indian vehicle number format')}
+                                helperText={vehicleNoError || (vehicleType === 'TRACTOR' ? 'Optional for tractor' : 'Indian vehicle number format')}
                             />
                         </Grid>
 
