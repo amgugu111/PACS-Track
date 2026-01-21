@@ -105,7 +105,8 @@ export class GateEntryService {
                 date: dto.date ? new Date(dto.date) : new Date(),
                 partyName: dto.partyName.trim(),
                 pacsName: society.name, // Denormalized for search
-                vehicleNo: dto.vehicleNo.trim().toUpperCase(),
+                vehicleType: dto.vehicleType,
+                vehicleNo: dto.vehicleNo ? dto.vehicleNo.trim().toUpperCase() : null,
                 bags: dto.bags,
                 quantity: dto.quantity,
                 remarks: dto.remarks,
@@ -364,6 +365,8 @@ export class GateEntryService {
                 return this.generateDailyReport(entries);
             case 'society':
                 return this.generateSocietyReport(entries);
+            case 'society-daywise':
+                return this.generateSocietyDaywiseReport(entries, filters.riceMillId, filters.seasonId);
             case 'district':
                 return this.generateDistrictReport(entries);
             case 'party':
@@ -416,6 +419,82 @@ export class GateEntryService {
             'Total Quantity (kg)': item.totalQuantity.toFixed(2),
             'Average Qty Per Entry': (item.totalQuantity / item.entries).toFixed(2),
         }));
+    }
+
+    private async generateSocietyDaywiseReport(entries: any[], riceMillId: string, seasonId?: string) {
+        // Get all societies with targets
+        const societies = await this.prisma.society.findMany({
+            where: { riceMillId },
+            include: {
+                targets: seasonId ? {
+                    where: { seasonId }
+                } : true,
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        // Get unique dates from entries and sort them
+        const dates = [...new Set(entries.map(e => new Date(e.date).toISOString().split('T')[0]))].sort();
+
+        // Get date range from filters
+        const reportData = await Promise.all(societies.map(async (society) => {
+            const target = society.targets && society.targets.length > 0 ? society.targets[0].targetQuantity : 0;
+
+            // Calculate cumulative quantity up to the first date
+            const cumulativeQuery = await this.prisma.gatePassEntry.aggregate({
+                where: {
+                    societyId: society.id,
+                    date: {
+                        lt: dates.length > 0 ? new Date(dates[0]) : new Date()
+                    },
+                    ...(seasonId && { seasonId })
+                },
+                _sum: {
+                    quantity: true
+                }
+            });
+
+            const cumulativeQty = Number(cumulativeQuery._sum.quantity) || 0;
+
+            // Group entries by date for this society
+            const societyEntries = entries.filter(e => (e.society?.id || e.societyId) === society.id);
+            const dailyData: Record<string, number> = {};
+
+            dates.forEach(date => {
+                const dayEntries = societyEntries.filter(e =>
+                    new Date(e.date).toISOString().split('T')[0] === date
+                );
+                dailyData[date] = dayEntries.reduce((sum, e) => sum + Number(e.quantity), 0);
+            });
+
+            // Calculate total
+            const dailyTotal = Object.values(dailyData).reduce((sum: number, qty: number) => sum + qty, 0);
+            const totalReceived = cumulativeQty + dailyTotal;
+            const variance = totalReceived - target;
+
+            const result: any = {
+                'Society Name': society.name,
+                'Miller Target': target.toFixed(2),
+            };
+
+            // Only add "Up To" column if there's cumulative data before the date range
+            if (cumulativeQty > 0 && dates.length > 0) {
+                result[`Up To ${new Date(dates[0]).toLocaleDateString('en-GB')}`] = cumulativeQty.toFixed(2);
+            }
+
+            // Add daily columns
+            dates.forEach(date => {
+                const displayDate = new Date(date).toLocaleDateString('en-GB');
+                result[displayDate] = (dailyData[date] || 0).toFixed(2);
+            });
+
+            result['Total Paddy Received'] = totalReceived.toFixed(2);
+            result['Less and Excess Paddy Received Against Target'] = variance.toFixed(2);
+
+            return result;
+        }));
+
+        return reportData;
     }
 
     private generateDistrictReport(entries: any[]) {

@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, Min, Matches, IsInt } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, Min, Matches, IsInt, IsEnum } from 'class-validator';
+
+export enum VehicleType {
+    TRACTOR = 'TRACTOR',
+    TRUCK = 'TRUCK',
+    TATA_ACE = 'TATA_ACE'
+}
 
 export class CreateGateEntryDto {
     @IsString()
@@ -13,12 +19,16 @@ export class CreateGateEntryDto {
     @IsNotEmpty()
     partyName: string; // Name of the Party
 
-    @IsString()
+    @IsEnum(VehicleType, { message: 'Vehicle type must be TRACTOR, TRUCK, or TATA_ACE' })
     @IsNotEmpty()
+    vehicleType: VehicleType;
+
+    @IsString()
+    @IsOptional()
     @Matches(/^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/, {
         message: 'Vehicle number must be in Indian format (e.g., OD01AB1234, MH12DE5678)'
     })
-    vehicleNo: string; // Vehicle Number (Indian format)
+    vehicleNo?: string; // Vehicle Number (optional for tractor)
 
     @IsInt({ message: 'Number of bags must be a whole number' })
     @Min(1, { message: 'Number of bags must be at least 1' })
@@ -53,6 +63,10 @@ export class UpdateGateEntryDto {
     @IsString()
     @IsOptional()
     partyName?: string;
+
+    @IsEnum(VehicleType)
+    @IsOptional()
+    vehicleType?: VehicleType;
 
     @IsString()
     @IsOptional()

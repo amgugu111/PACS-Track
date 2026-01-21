@@ -21,6 +21,10 @@ module.exports = function (options, webpack) {
                         from: path.resolve(__dirname, '../../node_modules/.prisma/client/schema.prisma'),
                         to: path.resolve(__dirname, 'dist/schema.prisma'),
                     },
+                    {
+                        from: path.resolve(__dirname, '../../node_modules/pdfkit/js/data'),
+                        to: path.resolve(__dirname, 'dist/data'),
+                    },
                 ],
             }),
         ],

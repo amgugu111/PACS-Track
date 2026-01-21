@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Res } from '@nestjs/common';
 import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
-import * as PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit';
 import { GateEntryService } from './gate-entry.service';
 import { CreateGateEntryDto, UpdateGateEntryDto } from './dto/gate-entry.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -95,8 +95,9 @@ export class GateEntryController {
             // Draw table header
             doc.fontSize(9).font('Helvetica-Bold');
             let xPos = 30;
+            const headerY = doc.y;
             headers.forEach(header => {
-                doc.text(header, xPos, doc.y, { width: columnWidth, align: 'left' });
+                doc.text(header, xPos, headerY, { width: columnWidth, align: 'left', continued: false });
                 xPos += columnWidth;
             });
             doc.moveDown();

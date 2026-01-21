@@ -98,13 +98,14 @@ model Party {
 }
 
 model GatePassEntry {
-  id           String   @id @default(cuid())
-  serialNumber Int      @default(autoincrement())
+  id           String      @id @default(cuid())
+  serialNumber Int         @default(autoincrement())
   tokenNo      String
-  date         DateTime @default(now())
+  date         DateTime    @default(now())
   partyName    String
   pacsName     String
-  vehicleNo    String
+  vehicleType  VehicleType @default(TRUCK)
+  vehicleNo    String?
   bags         Int
   quantity     Float
   remarks      String?
@@ -112,15 +113,15 @@ model GatePassEntry {
   riceMillId   String
   societyId    String
   districtId   String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   partyId      String
   seasonId     String
-  district     District @relation(fields: [districtId], references: [id], onDelete: Cascade)
-  party        Party    @relation(fields: [partyId], references: [id], onDelete: Cascade)
-  riceMill     RiceMill @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
-  season       Season   @relation(fields: [seasonId], references: [id])
-  society      Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  district     District    @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  party        Party       @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  riceMill     RiceMill    @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+  season       Season      @relation(fields: [seasonId], references: [id])
+  society      Society     @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
   @@unique([tokenNo, riceMillId])
   @@unique([serialNumber, riceMillId])
@@ -180,4 +181,10 @@ enum UserRole {
 enum SeasonType {
   KHARIF
   RABI
+}
+
+enum VehicleType {
+  TRACTOR
+  TRUCK
+  TATA_ACE
 }

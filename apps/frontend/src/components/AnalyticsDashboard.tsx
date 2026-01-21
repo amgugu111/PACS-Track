@@ -37,6 +37,7 @@ import {
 import { useDashboardStats, useActiveSeason, useSeasons } from '@/hooks/useApi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 
 const COLORS = ['#4caf50', '#ff9800', '#f44336', '#2196f3', '#9c27b0', '#00bcd4'];
 
@@ -350,7 +351,7 @@ export default function AnalyticsDashboard() {
                             {stats.recentEntries.map((entry: any) => (
                                 <TableRow key={entry.id}>
                                     <TableCell>{entry.tokenNo}</TableCell>
-                                    <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                                    <TableCell>{format(new Date(entry.date), 'dd/MM/yyyy')}</TableCell>
                                     <TableCell>{entry.society}</TableCell>
                                     <TableCell>{entry.district}</TableCell>
                                     <TableCell align="right">{entry.quantity.toLocaleString()}</TableCell>

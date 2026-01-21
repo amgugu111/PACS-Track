@@ -13,6 +13,7 @@ import {
     CircularProgress,
     Snackbar,
     Chip,
+    MenuItem,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -31,6 +32,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const [tokenNo, setTokenNo] = useState('');
     const [date, setDate] = useState<Date | null>(new Date());
     const [partyName, setPartyName] = useState(''); // Name of the Party
+    const [vehicleType, setVehicleType] = useState<'tractor' | 'truck' | 'tata_ace'>('truck');
     const [vehicleNo, setVehicleNo] = useState(''); // Vehicle Number
     const [bags, setBags] = useState<number | ''>(''); // Number of Bags
     const [quantity, setQuantity] = useState<number | ''>(''); // Quantity in quintal
@@ -163,6 +165,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
         setTokenNo('');
         setDate(new Date());
         setPartyName('');
+        setVehicleType('truck');
         setVehicleNo('');
         setBags('');
         setQuantity('');
@@ -221,6 +224,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 label="Date"
                                 value={date}
                                 onChange={(newValue) => setDate(newValue)}
+                                format="dd/MM/yyyy"
                                 slotProps={{
                                     textField: {
                                         fullWidth: true,
@@ -328,11 +332,34 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                             />
                         </Grid>
 
+                        {/* Vehicle Type */}
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <TextField
+                                select
+                                fullWidth
+                                required
+                                label="Vehicle Type"
+                                value={vehicleType}
+                                onChange={(e) => {
+                                    setVehicleType(e.target.value as 'tractor' | 'truck' | 'tata_ace');
+                                    // Clear vehicle number and error when switching to tractor
+                                    if (e.target.value === 'tractor') {
+                                        setVehicleNo('');
+                                        setVehicleNoError('');
+                                    }
+                                }}
+                            >
+                                <MenuItem value="truck">Truck</MenuItem>
+                                <MenuItem value="tractor">Tractor</MenuItem>
+                                <MenuItem value="tata_ace">Tata Ace</MenuItem>
+                            </TextField>
+                        </Grid>
+
                         {/* Vehicle Number */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
-                                required
+                                required={vehicleType !== 'tractor'}
                                 label="Vehicle Number"
                                 value={vehicleNo}
                                 onChange={(e) => {
@@ -346,7 +373,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 }}
                                 placeholder="e.g., OD01AB1234"
                                 error={!!vehicleNoError}
-                                helperText={vehicleNoError || 'Indian vehicle number format'}
+                                helperText={vehicleNoError || (vehicleType === 'tractor' ? 'Optional for tractor' : 'Indian vehicle number format')}
                             />
                         </Grid>
 

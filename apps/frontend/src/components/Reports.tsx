@@ -134,6 +134,12 @@ export default function Reports() {
             reportType: 'society',
         },
         {
+            title: 'Society Day-wise Report',
+            description: 'Daily procurement tracking with targets for each society',
+            icon: <TableIcon sx={{ fontSize: 40, color: 'success.main' }} />,
+            reportType: 'society-daywise',
+        },
+        {
             title: 'District-wise Report',
             description: 'Gate entries aggregated by districts',
             icon: <AssessmentIcon sx={{ fontSize: 40, color: 'info.main' }} />,
@@ -175,6 +181,7 @@ export default function Reports() {
                                 label="From Date"
                                 value={fromDate}
                                 onChange={(newValue) => setFromDate(newValue)}
+                                format="dd/MM/yyyy"
                                 slotProps={{
                                     textField: {
                                         fullWidth: true,
@@ -189,6 +196,7 @@ export default function Reports() {
                                 label="To Date"
                                 value={toDate}
                                 onChange={(newValue) => setToDate(newValue)}
+                                format="dd/MM/yyyy"
                                 slotProps={{
                                     textField: {
                                         fullWidth: true,

@@ -47,10 +47,10 @@ export class SeasonController {
     @Post(':id/targets')
     async setTargets(
         @Param('id') id: string,
-        @Body() targets: SetTargetDto[],
+        @Body() body: { targets: SetTargetDto[] },
         @CurrentUser() user: any
     ) {
-        return this.seasonService.setTargets(id, targets, user.riceMillId);
+        return this.seasonService.setTargets(id, body.targets, user.riceMillId);
     }
 
     @Get(':id/targets')
