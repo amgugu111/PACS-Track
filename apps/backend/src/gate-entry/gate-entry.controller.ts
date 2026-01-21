@@ -59,7 +59,7 @@ export class GateEntryController {
         @Query('seasonId') seasonId?: string,
         @Res() res?: Response,
     ) {
-        const data = await this.gateEntryService.generateReport({
+        const report = await this.gateEntryService.generateReport({
             riceMillId: user.riceMillId,
             fromDate,
             toDate,
@@ -68,6 +68,9 @@ export class GateEntryController {
             districtId,
             seasonId,
         });
+
+        const data = report.data;
+        const riceMillName = report.riceMillName;
 
         if (data.length === 0) {
             res.status(404).send('No data found for the selected filters');
@@ -84,6 +87,10 @@ export class GateEntryController {
             res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.pdf"`);
 
             doc.pipe(res);
+
+            // Add rice mill name
+            doc.fontSize(18).font('Helvetica-Bold').text(riceMillName, { align: 'center' });
+            doc.moveDown(0.5);
 
             // Add title
             doc.fontSize(16).font('Helvetica-Bold').text(`${reportType.toUpperCase()} REPORT`, { align: 'center' });
@@ -114,24 +121,51 @@ export class GateEntryController {
             // Add data rows
             doc.font('Helvetica').fontSize(8);
             data.forEach((row, index) => {
-                xPos = 30;
-                const startY = doc.y;
+                // Check if this is the total row (row with 'TOTAL' in any field)
+                const isTotalRow = Object.values(row).some(val => val === 'TOTAL');
+
+                // Add extra spacing before total row
+                if (isTotalRow) {
+                    doc.moveDown(0.5);
+                    doc.moveTo(30, doc.y).lineTo(doc.page.width - 30, doc.y).stroke();
+                    doc.moveDown(0.3);
+                    doc.font('Helvetica-Bold').fontSize(9);
+                }
 
                 // Check if we need a new page
                 if (doc.y > doc.page.height - 100) {
                     doc.addPage();
                 }
 
+                xPos = 30;
+                const startY = doc.y;
+                let maxHeight = 0;
+
+                // Calculate max height needed for this row
                 headers.forEach(header => {
-                    const value = row[header] ? String(row[header]) : '';
-                    doc.text(value, xPos, startY, { width: columnWidth, align: 'left', height: 20 });
+                    const value = row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
+                    const textHeight = doc.heightOfString(value, { width: columnWidth });
+                    if (textHeight > maxHeight) maxHeight = textHeight;
+                });
+
+                // Draw all cells at the same startY
+                headers.forEach(header => {
+                    const value = row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
+                    doc.text(value, xPos, startY, { width: columnWidth, align: 'left' });
                     xPos += columnWidth;
                 });
 
+                // Move down by the actual height of the tallest cell
+                doc.y = startY + maxHeight;
                 doc.moveDown(0.3);
 
-                // Add subtle line between rows
-                if (index < data.length - 1) {
+                // Reset font after total row
+                if (isTotalRow) {
+                    doc.font('Helvetica').fontSize(8);
+                }
+
+                // Add subtle line between rows (but not after the last row or total row)
+                if (index < data.length - 1 && !isTotalRow) {
                     doc.moveTo(30, doc.y).lineTo(doc.page.width - 30, doc.y).stroke('#CCCCCC');
                     doc.moveDown(0.3);
                 }
@@ -147,20 +181,61 @@ export class GateEntryController {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Report');
 
+            // Add rice mill name as title
+            worksheet.mergeCells('A1', `${String.fromCharCode(64 + headers.length)}1`);
+            worksheet.getCell('A1').value = riceMillName;
+            worksheet.getCell('A1').font = { bold: true, size: 16 };
+            worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+            // Add report title
+            worksheet.mergeCells('A2', `${String.fromCharCode(64 + headers.length)}2`);
+            worksheet.getCell('A2').value = `${reportType.toUpperCase()} REPORT`;
+            worksheet.getCell('A2').font = { bold: true, size: 14 };
+            worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+            // Add date range
+            worksheet.mergeCells('A3', `${String.fromCharCode(64 + headers.length)}3`);
+            worksheet.getCell('A3').value = `Period: ${fromDate} to ${toDate}`;
+            worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+            // Add empty row
+            worksheet.addRow([]);
+
             // Add header row with styling
             worksheet.addRow(headers);
-            worksheet.getRow(1).font = { bold: true };
-            worksheet.getRow(1).fill = {
+            const headerRow = worksheet.lastRow;
+            headerRow.font = { bold: true };
+            headerRow.fill = {
                 type: 'pattern',
                 pattern: 'solid',
                 fgColor: { argb: 'FF4472C4' },
             };
-            worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
 
-            // Add data rows
-            data.forEach(row => {
-                worksheet.addRow(headers.map(header => row[header] || ''));
+            // Add data rows and identify total row
+            let totalRowNumber = null;
+            data.forEach((row, index) => {
+                const rowData = headers.map(header => row[header] !== null && row[header] !== undefined ? row[header] : '');
+                worksheet.addRow(rowData);
+
+                // Check if this is a total row
+                if (Object.values(row).some(val => val === 'TOTAL')) {
+                    totalRowNumber = worksheet.lastRow.number;
+                }
             });
+
+            // Make total row bold and add spacing
+            if (totalRowNumber) {
+                const totalRow = worksheet.getRow(totalRowNumber);
+                totalRow.font = { bold: true };
+                totalRow.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE7E6E6' },
+                };
+                // Add empty row before total
+                worksheet.spliceRows(totalRowNumber, 0, []);
+            }
 
             // Auto-fit columns
             worksheet.columns.forEach(column => {
@@ -182,6 +257,10 @@ export class GateEntryController {
         } else {
             // Generate CSV file
             const csvRows = [
+                `"${riceMillName}"`,
+                `"${reportType.toUpperCase()} REPORT"`,
+                `"Period: ${fromDate} to ${toDate}"`,
+                '',
                 headers.join(','),
                 ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(',')),
             ];

@@ -205,12 +205,6 @@ export default function Reports() {
             reportType: 'party',
         },
         {
-            title: 'Vehicle-wise Report',
-            description: 'Track all entries by vehicle numbers',
-            icon: <VehicleIcon sx={{ fontSize: 40, color: 'error.main' }} />,
-            reportType: 'vehicle',
-        },
-        {
             title: 'Summary Report',
             description: 'Consolidated summary with totals and averages',
             icon: <AssessmentIcon sx={{ fontSize: 40, color: 'secondary.main' }} />,

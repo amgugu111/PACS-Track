@@ -448,31 +448,48 @@ export class GateEntryService {
         districtId?: string;
         seasonId?: string;
     }) {
+        // Fetch rice mill name
+        const riceMill = await this.prisma.riceMill.findUnique({
+            where: { id: filters.riceMillId },
+            select: { name: true },
+        });
+
         const dateFilter = {
             gte: new Date(filters.fromDate),
             lte: new Date(filters.toDate + 'T23:59:59.999Z'),
         };
 
         // Route to optimized report methods based on type
+        let reportData;
         switch (filters.reportType) {
             case 'daily':
-                return this.generateDailyReportOptimized(filters, dateFilter);
+                reportData = await this.generateDailyReportOptimized(filters, dateFilter);
+                break;
             case 'society':
-                return this.generateSocietyReportOptimized(filters, dateFilter);
+                reportData = await this.generateSocietyReportOptimized(filters, dateFilter);
+                break;
             case 'society-daywise':
-                return this.generateSocietyDaywiseReport(filters, dateFilter);
+                reportData = await this.generateSocietyDaywiseReport(filters, dateFilter);
+                break;
             case 'district':
-                return this.generateDistrictReportOptimized(filters, dateFilter);
+                reportData = await this.generateDistrictReportOptimized(filters, dateFilter);
+                break;
             case 'party':
-                return this.generatePartyReportOptimized(filters, dateFilter);
-            case 'vehicle':
-                return this.generateVehicleReportOptimized(filters, dateFilter);
+                reportData = await this.generatePartyReportOptimized(filters, dateFilter);
+                break;
             case 'summary':
-                return this.generateSummaryReportOptimized(filters, dateFilter);
+                reportData = await this.generateSummaryReportOptimized(filters, dateFilter);
+                break;
             default:
                 // Fallback to fetching entries with selective fields
-                return this.fetchEntriesForReport(filters, dateFilter);
+                reportData = await this.fetchEntriesForReport(filters, dateFilter);
         }
+
+        // Add rice mill name to the report metadata
+        return {
+            riceMillName: riceMill?.name || 'Unknown Rice Mill',
+            data: reportData,
+        };
     }
 
     /**
@@ -522,7 +539,8 @@ export class GateEntryService {
     private async generateDailyReportOptimized(filters: any, dateFilter: any) {
         const entries = await this.fetchEntriesForReport(filters, dateFilter);
 
-        return entries.map(entry => ({
+        const reportData = entries.map((entry, index) => ({
+            'S.No': index + 1,
             'Token No': entry.tokenNo,
             'Date': new Date(entry.date).toLocaleDateString(),
             'Society': entry.society?.name || entry.pacsName,
@@ -530,10 +548,30 @@ export class GateEntryService {
             'Party Name': entry.partyName,
             'Vehicle No': entry.vehicleNo || '',
             'Bags': entry.bags,
-            'Quantity (kg)': entry.quantity,
+            'Quantity (qtl)': entry.quantity,
             'Qty Per Bag': (entry.quantity / entry.bags).toFixed(2),
             'Remarks': entry.remarks || '',
         }));
+
+        // Add total row
+        const totalBags = entries.reduce((sum, entry) => sum + entry.bags, 0);
+        const totalQuantity = entries.reduce((sum, entry) => sum + entry.quantity, 0);
+
+        reportData.push({
+            'S.No': null as any,
+            'Token No': '',
+            'Date': '',
+            'Society': '',
+            'District': '',
+            'Party Name': 'TOTAL',
+            'Vehicle No': '',
+            'Bags': totalBags,
+            'Quantity (qtl)': totalQuantity,
+            'Qty Per Bag': totalBags > 0 ? (totalQuantity / totalBags).toFixed(2) : '0.00',
+            'Remarks': '',
+        });
+
+        return reportData;
     }
 
     /**
@@ -548,33 +586,66 @@ export class GateEntryService {
         if (filters.districtId) where.districtId = filters.districtId;
         if (filters.seasonId) where.seasonId = filters.seasonId;
 
-        // Use raw SQL for efficient grouping
-        const results = await this.prisma.$queryRaw<any[]>`
-            SELECT 
+        // Build query parts conditionally
+        const queryParts = [
+            `SELECT 
                 s.name as society,
                 COUNT(gpe.id) as entries,
                 SUM(gpe.bags)::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
             LEFT JOIN societies s ON gpe."societyId" = s.id
-            WHERE gpe."riceMillId" = ${filters.riceMillId}
-                AND gpe.date >= ${dateFilter.gte}
-                AND gpe.date <= ${dateFilter.lte}
-                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
-                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
-            GROUP BY s.name
-            ORDER BY s.name ASC
-        `;
+            WHERE gpe."riceMillId" = $1
+                AND gpe.date >= $2
+                AND gpe.date <= $3`
+        ];
 
-        return results.map(row => ({
+        const params: any[] = [filters.riceMillId, dateFilter.gte, dateFilter.lte];
+        let paramIndex = 4;
+
+        if (filters.seasonId) {
+            queryParts.push(`AND gpe."seasonId" = $${paramIndex}`);
+            params.push(filters.seasonId);
+            paramIndex++;
+        }
+
+        if (filters.districtId) {
+            queryParts.push(`AND gpe."districtId" = $${paramIndex}`);
+            params.push(filters.districtId);
+            paramIndex++;
+        }
+
+        queryParts.push(`GROUP BY s.name ORDER BY s.name ASC`);
+
+        const query = queryParts.join(' ');
+        const results = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
+
+        const reportData = results.map((row, index) => ({
+            'S.No': index + 1,
             'Society': row.society || 'Unknown',
             'Total Entries': Number(row.entries),
             'Total Bags': Number(row.total_bags),
-            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
+            'Total Quantity (qtl)': Number(row.total_quantity).toFixed(2),
             'Average Qty Per Entry': Number(row.entries) > 0
                 ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
                 : '0.00',
         }));
+
+        // Add total row
+        const totalEntries = results.reduce((sum, row) => sum + Number(row.entries), 0);
+        const totalBags = results.reduce((sum, row) => sum + Number(row.total_bags), 0);
+        const totalQuantity = results.reduce((sum, row) => sum + Number(row.total_quantity), 0);
+
+        reportData.push({
+            'S.No': null as any,
+            'Society': 'TOTAL',
+            'Total Entries': totalEntries,
+            'Total Bags': totalBags,
+            'Total Quantity (qtl)': totalQuantity.toFixed(2),
+            'Average Qty Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0.00',
+        });
+
+        return reportData;
     }
 
     /**
@@ -588,9 +659,9 @@ export class GateEntryService {
 
         if (filters.seasonId) where.seasonId = filters.seasonId;
 
-        // Use raw SQL for efficient grouping with district stats
-        const results = await this.prisma.$queryRaw<any[]>`
-            SELECT 
+        // Build query parts conditionally
+        const queryParts = [
+            `SELECT 
                 d.name as district,
                 COUNT(gpe.id) as entries,
                 COUNT(DISTINCT gpe."societyId") as societies,
@@ -598,24 +669,54 @@ export class GateEntryService {
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
             LEFT JOIN districts d ON gpe."districtId" = d.id
-            WHERE gpe."riceMillId" = ${filters.riceMillId}
-                AND gpe.date >= ${dateFilter.gte}
-                AND gpe.date <= ${dateFilter.lte}
-                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
-            GROUP BY d.name
-            ORDER BY d.name ASC
-        `;
+            WHERE gpe."riceMillId" = $1
+                AND gpe.date >= $2
+                AND gpe.date <= $3`
+        ];
 
-        return results.map(row => ({
+        const params: any[] = [filters.riceMillId, dateFilter.gte, dateFilter.lte];
+        let paramIndex = 4;
+
+        if (filters.seasonId) {
+            queryParts.push(`AND gpe."seasonId" = $${paramIndex}`);
+            params.push(filters.seasonId);
+            paramIndex++;
+        }
+
+        queryParts.push(`GROUP BY d.name ORDER BY d.name ASC`);
+
+        const query = queryParts.join(' ');
+        const results = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
+
+        const reportData = results.map((row, index) => ({
+            'S.No': index + 1,
             'District': row.district || 'Unknown',
             'Total Entries': Number(row.entries),
             'Total Societies': Number(row.societies),
             'Total Bags': Number(row.total_bags),
-            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
+            'Total Quantity (qtl)': Number(row.total_quantity).toFixed(2),
             'Average Qty Per Entry': Number(row.entries) > 0
                 ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
                 : '0.00',
         }));
+
+        // Add total row
+        const totalEntries = results.reduce((sum, row) => sum + Number(row.entries), 0);
+        const totalSocieties = results.reduce((sum, row) => sum + Number(row.societies), 0);
+        const totalBags = results.reduce((sum, row) => sum + Number(row.total_bags), 0);
+        const totalQuantity = results.reduce((sum, row) => sum + Number(row.total_quantity), 0);
+
+        reportData.push({
+            'S.No': null as any,
+            'District': 'TOTAL',
+            'Total Entries': totalEntries,
+            'Total Societies': totalSocieties,
+            'Total Bags': totalBags,
+            'Total Quantity (qtl)': totalQuantity.toFixed(2),
+            'Average Qty Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0.00',
+        });
+
+        return reportData;
     }
 
     /**
@@ -631,75 +732,71 @@ export class GateEntryService {
         if (filters.districtId) where.districtId = filters.districtId;
         if (filters.seasonId) where.seasonId = filters.seasonId;
 
-        const results = await this.prisma.$queryRaw<any[]>`
-            SELECT 
+        // Build query parts conditionally
+        const queryParts = [
+            `SELECT 
                 gpe."partyName" as party,
                 COUNT(gpe.id) as entries,
                 SUM(gpe.bags)::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
-            WHERE gpe."riceMillId" = ${filters.riceMillId}
-                AND gpe.date >= ${dateFilter.gte}
-                AND gpe.date <= ${dateFilter.lte}
-                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
-                ${filters.societyId ? `AND gpe."societyId" = ${filters.societyId}` : ''}
-                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
-            GROUP BY gpe."partyName"
-            ORDER BY gpe."partyName" ASC
-        `;
+            WHERE gpe."riceMillId" = $1
+                AND gpe.date >= $2
+                AND gpe.date <= $3`
+        ];
 
-        return results.map(row => ({
+        const params: any[] = [filters.riceMillId, dateFilter.gte, dateFilter.lte];
+        let paramIndex = 4;
+
+        if (filters.seasonId) {
+            queryParts.push(`AND gpe."seasonId" = $${paramIndex}`);
+            params.push(filters.seasonId);
+            paramIndex++;
+        }
+
+        if (filters.societyId) {
+            queryParts.push(`AND gpe."societyId" = $${paramIndex}`);
+            params.push(filters.societyId);
+            paramIndex++;
+        }
+
+        if (filters.districtId) {
+            queryParts.push(`AND gpe."districtId" = $${paramIndex}`);
+            params.push(filters.districtId);
+            paramIndex++;
+        }
+
+        queryParts.push(`GROUP BY gpe."partyName" ORDER BY gpe."partyName" ASC`);
+
+        const query = queryParts.join(' ');
+        const results = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
+
+        const reportData = results.map((row, index) => ({
+            'S.No': index + 1,
             'Party Name': row.party,
             'Total Entries': Number(row.entries),
             'Total Bags': Number(row.total_bags),
-            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
+            'Total Quantity (qtl)': Number(row.total_quantity).toFixed(2),
             'Average Qty Per Entry': Number(row.entries) > 0
                 ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
                 : '0.00',
         }));
-    }
 
-    /**
-     * OPTIMIZED: Vehicle report using database aggregation
-     */
-    private async generateVehicleReportOptimized(filters: any, dateFilter: any) {
-        const where: any = {
-            riceMillId: filters.riceMillId,
-            date: dateFilter,
-        };
+        // Add total row
+        const totalEntries = results.reduce((sum, row) => sum + Number(row.entries), 0);
+        const totalBags = results.reduce((sum, row) => sum + Number(row.total_bags), 0);
+        const totalQuantity = results.reduce((sum, row) => sum + Number(row.total_quantity), 0);
 
-        if (filters.societyId) where.societyId = filters.societyId;
-        if (filters.districtId) where.districtId = filters.districtId;
-        if (filters.seasonId) where.seasonId = filters.seasonId;
+        reportData.push({
+            'S.No': null as any,
+            'Party Name': 'TOTAL',
+            'Total Entries': totalEntries,
+            'Total Bags': totalBags,
+            'Total Quantity (qtl)': totalQuantity.toFixed(2),
+            'Average Qty Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0.00',
+        });
 
-        const results = await this.prisma.$queryRaw<any[]>`
-            SELECT 
-                gpe."vehicleNo" as vehicle,
-                COUNT(gpe.id) as entries,
-                COUNT(DISTINCT gpe."partyName") as parties,
-                SUM(gpe.bags)::int as total_bags,
-                SUM(gpe.quantity)::numeric as total_quantity
-            FROM gate_pass_entries gpe
-            WHERE gpe."riceMillId" = ${filters.riceMillId}
-                AND gpe.date >= ${dateFilter.gte}
-                AND gpe.date <= ${dateFilter.lte}
-                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
-                ${filters.societyId ? `AND gpe."societyId" = ${filters.societyId}` : ''}
-                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
-            GROUP BY gpe."vehicleNo"
-            ORDER BY gpe."vehicleNo" ASC
-        `;
-
-        return results.map(row => ({
-            'Vehicle No': row.vehicle || 'N/A',
-            'Total Trips': Number(row.entries),
-            'Different Parties': Number(row.parties),
-            'Total Bags': Number(row.total_bags),
-            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
-            'Average Qty Per Trip': Number(row.entries) > 0
-                ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
-                : '0.00',
-        }));
+        return reportData;
     }
 
     /**
@@ -715,8 +812,9 @@ export class GateEntryService {
         if (filters.districtId) where.districtId = filters.districtId;
         if (filters.seasonId) where.seasonId = filters.seasonId;
 
-        const [result] = await this.prisma.$queryRaw<any[]>`
-            SELECT 
+        // Build query parts conditionally
+        const queryParts = [
+            `SELECT 
                 COUNT(gpe.id) as total_entries,
                 SUM(gpe.bags)::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity,
@@ -725,13 +823,34 @@ export class GateEntryService {
                 COUNT(DISTINCT gpe."partyName") as unique_parties,
                 COUNT(DISTINCT gpe."vehicleNo") as unique_vehicles
             FROM gate_pass_entries gpe
-            WHERE gpe."riceMillId" = ${filters.riceMillId}
-                AND gpe.date >= ${dateFilter.gte}
-                AND gpe.date <= ${dateFilter.lte}
-                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
-                ${filters.societyId ? `AND gpe."societyId" = ${filters.societyId}` : ''}
-                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
-        `;
+            WHERE gpe."riceMillId" = $1
+                AND gpe.date >= $2
+                AND gpe.date <= $3`
+        ];
+
+        const params: any[] = [filters.riceMillId, dateFilter.gte, dateFilter.lte];
+        let paramIndex = 4;
+
+        if (filters.seasonId) {
+            queryParts.push(`AND gpe."seasonId" = $${paramIndex}`);
+            params.push(filters.seasonId);
+            paramIndex++;
+        }
+
+        if (filters.societyId) {
+            queryParts.push(`AND gpe."societyId" = $${paramIndex}`);
+            params.push(filters.societyId);
+            paramIndex++;
+        }
+
+        if (filters.districtId) {
+            queryParts.push(`AND gpe."districtId" = $${paramIndex}`);
+            params.push(filters.districtId);
+            paramIndex++;
+        }
+
+        const query = queryParts.join(' ');
+        const [result] = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
 
         const totalEntries = Number(result.total_entries);
         const totalBags = Number(result.total_bags);
@@ -741,7 +860,7 @@ export class GateEntryService {
             'Metric': 'Summary',
             'Total Entries': totalEntries,
             'Total Bags': totalBags,
-            'Total Quantity (kg)': totalQuantity.toFixed(2),
+            'Total Quantity (qtl)': totalQuantity.toFixed(2),
             'Average Bags Per Entry': totalEntries > 0 ? (totalBags / totalEntries).toFixed(2) : '0',
             'Average Quantity Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0',
             'Unique Societies': Number(result.unique_societies),
@@ -812,7 +931,7 @@ export class GateEntryService {
         );
 
         // Process each society
-        const reportData = societies.map((society) => {
+        const reportData = societies.map((society, index) => {
             const target = society.targets && society.targets.length > 0
                 ? society.targets[0].targetQuantity
                 : 0;
@@ -836,6 +955,7 @@ export class GateEntryService {
             const variance = totalReceived - target;
 
             const result: any = {
+                'S.No': index + 1,
                 'Society Name': society.name,
                 'Miller Target': target.toFixed(2),
             };
@@ -856,6 +976,38 @@ export class GateEntryService {
 
             return result;
         });
+
+        // Add total row
+        const totalRow: any = {
+            'S.No': null as any,
+            'Society Name': 'TOTAL',
+            'Miller Target': societies.reduce((sum, s) =>
+                sum + (s.targets && s.targets.length > 0 ? s.targets[0].targetQuantity : 0), 0
+            ).toFixed(2),
+        };
+
+        // Calculate total cumulative if applicable
+        if (reportData.length > 0 && reportData[0][`Up To ${new Date(dates[0]).toLocaleDateString('en-GB')}`]) {
+            totalRow[`Up To ${new Date(dates[0]).toLocaleDateString('en-GB')}`] = Array.from(cumulativeMap.values())
+                .reduce((sum, val) => sum + val, 0).toFixed(2);
+        }
+
+        // Calculate totals for each date
+        dates.forEach(date => {
+            const displayDate = new Date(date).toLocaleDateString('en-GB');
+            const dateTotal = reportData.reduce((sum, row) => sum + parseFloat(row[displayDate] || 0), 0);
+            totalRow[displayDate] = dateTotal.toFixed(2);
+        });
+
+        totalRow['Total Paddy Received'] = reportData.reduce((sum, row) =>
+            sum + parseFloat(row['Total Paddy Received']), 0
+        ).toFixed(2);
+
+        totalRow['Less and Excess Paddy Received Against Target'] = reportData.reduce((sum, row) =>
+            sum + parseFloat(row['Less and Excess Paddy Received Against Target']), 0
+        ).toFixed(2);
+
+        reportData.push(totalRow);
 
         return reportData;
     }
