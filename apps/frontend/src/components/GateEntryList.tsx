@@ -45,7 +45,7 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
     const [selectedSocietyId, setSelectedSocietyId] = useState<string>('');
     const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
-    
+
     // Dialog states
     const [selectedEntry, setSelectedEntry] = useState<GateEntryResponse | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -91,6 +91,7 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
             setSortBy(columnId);
             setSortOrder('asc');
         }
+        console.log('Sorting changed:', { columnId, newSortBy: sortBy === columnId ? sortBy : columnId, newSortOrder: sortBy === columnId ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'asc' });
     }, [sortBy, sortOrder]);
 
     const handleDeleteClick = (entry: GateEntryResponse) => {
@@ -129,9 +130,10 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
         {
             id: 'serialNumber',
             label: 'Serial No.',
-            sortable: true,
+            sortable: false,
             align: 'center',
             minWidth: 100,
+            format: (value: any, row?: any, index?: number) => (page * rowsPerPage) + (index ?? 0) + 1,
         },
         {
             id: 'date',
@@ -275,7 +277,7 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
                         placeholder="Search by party name, vehicle number, token number, or PACS name..."
                         onSearch={handleSearch}
                     />
-                    
+
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                         <FormControl sx={{ minWidth: 200 }}>
                             <InputLabel>Season</InputLabel>
@@ -330,7 +332,7 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
                             >
                                 <MenuItem value="">All Societies</MenuItem>
                                 {societies
-                                    ?.filter((society: any) => 
+                                    ?.filter((society: any) =>
                                         !selectedDistrictId || society.districtId === selectedDistrictId
                                     )
                                     .map((society: any) => (

@@ -16,6 +16,7 @@ import {
 import DistrictManagement from '@/components/DistrictManagement';
 import SocietyManagement from '@/components/SocietyManagement';
 import PartyManagement from '@/components/PartyManagement';
+import VehicleManagement from '@/components/VehicleManagement';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -85,6 +86,7 @@ export default function ManagementPage() {
                         <Tab label="Districts" id="management-tab-0" />
                         <Tab label="Societies (PACS)" id="management-tab-1" />
                         <Tab label="Parties" id="management-tab-2" />
+                        <Tab label="Vehicles" id="management-tab-3" />
                     </Tabs>
                 </Box>
 
@@ -98,6 +100,10 @@ export default function ManagementPage() {
 
                 <TabPanel value={tabValue} index={2}>
                     <PartyManagement />
+                </TabPanel>
+
+                <TabPanel value={tabValue} index={3}>
+                    <VehicleManagement />
                 </TabPanel>
             </Container>
         </Box>

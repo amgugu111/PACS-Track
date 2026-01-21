@@ -8,6 +8,7 @@ import { PartyModule } from './party/party.module';
 import { DistrictModule } from './district/district.module';
 import { SeasonModule } from './season/season.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { VehicleModule } from './vehicle/vehicle.module';
 
 @Module({
     imports: [
@@ -22,6 +23,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
         DistrictModule,
         SeasonModule,
         AnalyticsModule,
+        VehicleModule,
     ],
 })
 export class AppModule { }

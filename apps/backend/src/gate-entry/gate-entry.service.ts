@@ -212,7 +212,7 @@ export class GateEntryService {
 
         // Build orderBy clause
         const orderBy = QueryOptimizationHelper.buildOrderBy(
-            filters.sortBy || 'serialNumber',
+            filters.sortBy || 'date',
             filters.sortOrder || 'desc'
         );
 

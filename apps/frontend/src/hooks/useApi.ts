@@ -11,7 +11,10 @@ import type {
     CreateSeasonDto,
     SetTargetDto,
     DashboardStats,
-    PaginatedResponse
+    PaginatedResponse,
+    VehicleResponse,
+    CreateVehicleDto,
+    UpdateVehicleDto
 } from '@pacs-track/shared-types';
 
 // Fetcher function for SWR
@@ -45,6 +48,8 @@ export function useGateEntries(filters?: {
 
     const queryString = params.toString();
     const url = `/gate-entries${queryString ? `?${queryString}` : ''}`;
+
+    console.log('useGateEntries API call:', { url, filters });
 
     const { data, error, mutate } = useSWR<PaginatedResponse<GateEntryResponse>>(
         url,
@@ -371,5 +376,62 @@ export async function getTargetVsActualChart(seasonId: string, groupBy: 'society
 
 export async function getTrendData(seasonId: string) {
     const response = await apiClient.get(`/analytics/trend?seasonId=${seasonId}`);
+    return response.data;
+}
+
+// ============ Vehicle Hooks ============
+
+export function useVehicles(filters?: {
+    vehicleType?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}) {
+    const params = new URLSearchParams();
+    if (filters?.vehicleType) params.append('vehicleType', filters.vehicleType);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+
+    const queryString = params.toString();
+    const url = `/vehicles${queryString ? `?${queryString}` : ''}`;
+
+    const { data, error, mutate } = useSWR<PaginatedResponse<VehicleResponse>>(
+        url,
+        fetcher,
+        staticDataConfig
+    );
+
+    return {
+        vehicles: data?.data || [],
+        total: data?.total || 0,
+        page: data?.page || 0,
+        limit: data?.limit || 10,
+        totalPages: data?.totalPages || 0,
+        isLoading: !error && !data,
+        isError: error,
+        mutate,
+    };
+}
+
+export async function createVehicle(data: CreateVehicleDto) {
+    const response = await apiClient.post('/vehicles', data);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/vehicles'));
+    return response.data;
+}
+
+export async function updateVehicle(id: string, data: UpdateVehicleDto) {
+    const response = await apiClient.put(`/vehicles/${id}`, data);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/vehicles'));
+    return response.data;
+}
+
+export async function deleteVehicle(id: string) {
+    const response = await apiClient.delete(`/vehicles/${id}`);
+    await globalMutate((key) => typeof key === 'string' && key.startsWith('/vehicles'));
     return response.data;
 }

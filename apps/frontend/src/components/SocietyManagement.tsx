@@ -51,6 +51,7 @@ export default function SocietyManagementOptimized() {
         districtId: '',
         address: '',
         contactNo: '',
+        block: '',
     });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -86,6 +87,7 @@ export default function SocietyManagementOptimized() {
                 districtId: society.districtId,
                 address: society.address || '',
                 contactNo: society.contactNo || '',
+                block: society.block || '',
             });
         } else {
             setEditingSociety(null);
@@ -94,6 +96,7 @@ export default function SocietyManagementOptimized() {
                 districtId: '',
                 address: '',
                 contactNo: '',
+                block: '',
             });
         }
         setOpenDialog(true);
@@ -104,7 +107,7 @@ export default function SocietyManagementOptimized() {
     const handleCloseDialog = () => {
         setOpenDialog(false);
         setEditingSociety(null);
-        setFormData({ name: '', districtId: '', address: '', contactNo: '' });
+        setFormData({ name: '', districtId: '', address: '', contactNo: '', block: '' });
         setError(null);
     };
 
@@ -174,6 +177,13 @@ export default function SocietyManagementOptimized() {
             sortable: true,
             minWidth: 150,
             format: (value) => value?.name || '-',
+        },
+        {
+            id: 'block',
+            label: 'Block',
+            sortable: true,
+            minWidth: 120,
+            format: (value) => value ? <Chip label={value} size="small" variant="outlined" /> : '-',
         },
         {
             id: 'contactNo',
@@ -329,6 +339,14 @@ export default function SocietyManagementOptimized() {
                             value={formData.contactNo}
                             onChange={(e) => setFormData({ ...formData, contactNo: e.target.value })}
                             fullWidth
+                        />
+                        <TextField
+                            label="Block"
+                            value={formData.block}
+                            onChange={(e) => setFormData({ ...formData, block: e.target.value.toUpperCase() })}
+                            fullWidth
+                            helperText="Block name (optional)"
+                            inputProps={{ style: { textTransform: 'uppercase' } }}
                         />
                         <TextField
                             label="Address"

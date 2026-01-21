@@ -6,6 +6,7 @@ import { GateEntryService } from './gate-entry.service';
 import { CreateGateEntryDto, UpdateGateEntryDto } from './dto/gate-entry.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { SortOrder } from '../common/query-optimization.dto';
 
 @Controller('gate-entries')
 @UseGuards(JwtAuthGuard)
@@ -28,6 +29,8 @@ export class GateEntryController {
         @Query('search') search?: string,
         @Query('page') page?: string,
         @Query('limit') limit?: string,
+        @Query('sortBy') sortBy?: string,
+        @Query('sortOrder') sortOrder?: string,
     ) {
         return this.gateEntryService.findAll({
             riceMillId: user.riceMillId,
@@ -39,6 +42,8 @@ export class GateEntryController {
             search,
             page: page ? parseInt(page) : undefined,
             limit: limit ? parseInt(limit) : undefined,
+            sortBy,
+            sortOrder: sortOrder as SortOrder,
         });
     }
 

@@ -19,7 +19,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { CheckCircle, CalendarMonth } from '@mui/icons-material';
-import { useSocieties, useParties, createGateEntry, searchParties, useActiveSeason } from '@/hooks/useApi';
+import { useSocieties, useParties, createGateEntry, searchParties, useActiveSeason, useVehicles } from '@/hooks/useApi';
 import type { CreateGateEntryDto, SocietyResponse, PartyResponse } from '@pacs-track/shared-types';
 
 interface GateEntryFormProps {
@@ -51,6 +51,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const { societies, isLoading: loadingSocieties } = useSocieties({});
     const { parties } = useParties({ societyId: selectedSociety?.id });
     const { activeSeason, isLoading: loadingActiveSeason } = useActiveSeason();
+    const { vehicles } = useVehicles({ limit: 1000 }); // Get all managed vehicles
 
     // Calculated field: Qty Per Bag
     const qtyPerBag = bags && quantity ? (Number(quantity) / Number(bags)).toFixed(2) : '0.00';
@@ -149,12 +150,13 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
             await createGateEntry(dto);
             setSuccess(true);
 
-            // Reset form
+            // Reset form but stay on the page
             resetForm();
 
-            if (onSuccess) {
-                onSuccess();
-            }
+            // Don't call onSuccess to keep user on form
+            // if (onSuccess) {
+            //     onSuccess();
+            // }
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || 'Failed to create gate entry';
             setError(errorMessage);
@@ -217,9 +219,10 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 required
                                 label="Token Number"
                                 value={tokenNo}
-                                onChange={(e) => setTokenNo(e.target.value)}
+                                onChange={(e) => setTokenNo(e.target.value.toUpperCase())}
                                 placeholder="e.g., GP-2026-001"
                                 helperText="Unique token number"
+                                inputProps={{ style: { textTransform: 'uppercase' } }}
                             />
                         </Grid>
 
@@ -300,17 +303,17 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 value={partyName}
                                 onChange={(_, newValue) => {
                                     if (typeof newValue === 'string') {
-                                        setPartyName(newValue);
+                                        setPartyName(newValue.toUpperCase());
                                     } else if (newValue) {
-                                        setPartyName(newValue.name);
+                                        setPartyName(newValue.name.toUpperCase());
                                     } else {
                                         setPartyName('');
                                     }
                                 }}
                                 inputValue={partyInputValue}
                                 onInputChange={(_, newInputValue) => {
-                                    setPartyInputValue(newInputValue);
-                                    setPartyName(newInputValue);
+                                    setPartyInputValue(newInputValue.toUpperCase());
+                                    setPartyName(newInputValue.toUpperCase());
                                 }}
                                 disabled={!selectedSociety}
                                 renderInput={(params) => (
@@ -320,6 +323,10 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                         label="Name of the Party"
                                         helperText="Search existing or enter new party name"
                                         placeholder="Type to search or enter new name"
+                                        inputProps={{
+                                            ...params.inputProps,
+                                            style: { textTransform: 'uppercase' },
+                                        }}
                                     />
                                 )}
                                 renderOption={(props, option) => (
@@ -362,13 +369,12 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
 
                         {/* Vehicle Number */}
                         <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                required={vehicleType !== 'TRACTOR'}
-                                label="Vehicle Number"
+                            <Autocomplete
+                                freeSolo
+                                options={vehicles.map(v => v.vehicleNo)}
                                 value={vehicleNo}
-                                onChange={(e) => {
-                                    const value = e.target.value.toUpperCase().replace(/-/g, '');
+                                onChange={(event, newValue) => {
+                                    const value = (newValue || '').toUpperCase().replace(/-/g, '');
                                     setVehicleNo(value);
                                     if (value && !validateVehicleNumber(value)) {
                                         setVehicleNoError('Format: XX00XX0000');
@@ -376,9 +382,29 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                         setVehicleNoError('');
                                     }
                                 }}
-                                placeholder="e.g., OD01AB1234"
-                                error={!!vehicleNoError}
-                                helperText={vehicleNoError || (vehicleType === 'TRACTOR' ? 'Optional for tractor' : 'Indian vehicle number format')}
+                                onInputChange={(event, newInputValue) => {
+                                    const value = newInputValue.toUpperCase().replace(/-/g, '');
+                                    setVehicleNo(value);
+                                    if (value && !validateVehicleNumber(value)) {
+                                        setVehicleNoError('Format: XX00XX0000');
+                                    } else {
+                                        setVehicleNoError('');
+                                    }
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        required={vehicleType !== 'TRACTOR'}
+                                        label="Vehicle Number"
+                                        placeholder="e.g., OD01AB1234"
+                                        error={!!vehicleNoError}
+                                        helperText={vehicleNoError || (vehicleType === 'TRACTOR' ? 'Optional for tractor' : 'Select from list or enter new number')}
+                                        inputProps={{
+                                            ...params.inputProps,
+                                            style: { textTransform: 'uppercase' },
+                                        }}
+                                    />
+                                )}
                             />
                         </Grid>
 
@@ -440,9 +466,10 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                 rows={3}
                                 label="Remarks"
                                 value={remarks}
-                                onChange={(e) => setRemarks(e.target.value)}
+                                onChange={(e) => setRemarks(e.target.value.toUpperCase())}
                                 placeholder="Any additional information..."
                                 helperText="Optional"
+                                inputProps={{ style: { textTransform: 'uppercase' } }}
                             />
                         </Grid>
 

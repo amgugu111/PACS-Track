@@ -21,7 +21,7 @@ export interface Column {
     label: string;
     minWidth?: number;
     align?: 'left' | 'right' | 'center';
-    format?: (value: any, row?: any) => React.ReactNode;
+    format?: (value: any, row?: any, index?: number) => React.ReactNode;
     sortable?: boolean;
 }
 
@@ -116,7 +116,7 @@ export default function DataTable({
                                         const value = row[column.id];
                                         return (
                                             <TableCell key={column.id} align={column.align}>
-                                                {column.format ? column.format(value, row) : value}
+                                                {column.format ? column.format(value, row, rowIndex) : value}
                                             </TableCell>
                                         );
                                     })}

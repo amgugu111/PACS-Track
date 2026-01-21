@@ -11,6 +11,7 @@ import SeasonManagement from '@/components/SeasonManagement';
 import TargetSetting from '@/components/TargetSetting';
 import SocietyManagement from '@/components/SocietyManagement';
 import PartyManagement from '@/components/PartyManagement';
+import VehicleManagement from '@/components/VehicleManagement';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -29,7 +30,8 @@ function DashboardContent() {
         'targets': 4,
         'societies': 5,
         'parties': 6,
-        'reports': 7,
+        'vehicles': 7,
+        'reports': 8,
     };
 
     const tabIdMap: Record<number, string> = {
@@ -40,7 +42,8 @@ function DashboardContent() {
         4: 'targets',
         5: 'societies',
         6: 'parties',
-        7: 'reports',
+        7: 'vehicles',
+        8: 'reports',
     };
 
     // Initialize tab from URL
@@ -97,6 +100,7 @@ function DashboardContent() {
                         <Tab label="Set Targets" />
                         <Tab label="Societies (PACS)" />
                         <Tab label="Parties" />
+                        <Tab label="Vehicles" />
                         <Tab label="Reports" />
                     </Tabs>
                 </Box>
@@ -122,7 +126,9 @@ function DashboardContent() {
 
                 {activeTab === 6 && <PartyManagement />}
 
-                {activeTab === 7 && <Reports />}
+                {activeTab === 7 && <VehicleManagement />}
+
+                {activeTab === 8 && <Reports />}
             </Container>
         </ProtectedRoute>
     );

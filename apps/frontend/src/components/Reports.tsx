@@ -120,6 +120,59 @@ export default function Reports() {
         }
     };
 
+    const handlePreviewReport = async (reportType: string) => {
+        if (!fromDate || !toDate) {
+            setError('Please select both from and to dates');
+            return;
+        }
+
+        setLoadingReport(`preview-${reportType}`);
+        setError('');
+
+        try {
+            const params = new URLSearchParams({
+                fromDate: format(fromDate, 'yyyy-MM-dd'),
+                toDate: format(toDate, 'yyyy-MM-dd'),
+                reportType,
+                format: 'pdf',
+            });
+
+            if (selectedSociety !== 'all') {
+                params.append('societyId', selectedSociety);
+            }
+
+            if (selectedDistrict !== 'all') {
+                params.append('districtId', selectedDistrict);
+            }
+
+            if (selectedSeason !== 'all') {
+                params.append('seasonId', selectedSeason);
+            }
+
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gate-entries/reports/download?${params}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || `Server error: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+
+            // Clean up after a delay to ensure the new tab has loaded
+            setTimeout(() => window.URL.revokeObjectURL(url), 100);
+        } catch (err: any) {
+            setError(err.message || 'Failed to preview report');
+        } finally {
+            setLoadingReport(null);
+        }
+    };
+
     const reportCards = [
         {
             title: 'Daily Entry Report',
@@ -261,12 +314,12 @@ export default function Reports() {
                             </TextField>
                         </Grid>
 
-                        {/* Export Format */}
+                        {/* Format Selector */}
                         <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 select
                                 fullWidth
-                                label="Export Format"
+                                label="Download Format"
                                 value={selectedFormat}
                                 onChange={(e) => setSelectedFormat(e.target.value)}
                             >
@@ -309,7 +362,17 @@ export default function Reports() {
                                         {report.description}
                                     </Typography>
                                 </CardContent>
-                                <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
+                                <CardActions sx={{ justifyContent: 'center', pb: 2, flexDirection: 'column', gap: 1 }}>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={loadingReport === `preview-${report.reportType}` ? <CircularProgress size={20} /> : <AssessmentIcon />}
+                                        onClick={() => handlePreviewReport(report.reportType)}
+                                        disabled={loadingReport !== null || !fromDate || !toDate}
+                                        fullWidth
+                                        sx={{ mx: 2 }}
+                                    >
+                                        Preview (PDF)
+                                    </Button>
                                     <Button
                                         variant="contained"
                                         startIcon={loadingReport === report.reportType ? <CircularProgress size={20} /> : <DownloadIcon />}

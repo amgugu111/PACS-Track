@@ -23,6 +23,7 @@ model RiceMill {
   seasons         Season[]
   societies       Society[]
   users           User[]
+  vehicles        Vehicle[]
 
   @@map("rice_mills")
 }
@@ -71,6 +72,7 @@ model Society {
   riceMillId      String
   address         String?
   contactNo       String?
+  block           String? // Added block field
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   gatePassEntries GatePassEntry[]
@@ -104,6 +106,22 @@ model Party {
   @@index([phone])
   @@index([societyId, name])
   @@map("parties")
+}
+
+model Vehicle {
+  id          String   @id @default(cuid())
+  vehicleNo   String // Vehicle registration number
+  vehicleType String // TRACTOR, TRUCK, TATA_ACE
+  riceMillId  String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  riceMill    RiceMill @relation(fields: [riceMillId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleNo, riceMillId])
+  @@index([riceMillId])
+  @@index([vehicleType])
+  @@map("vehicles")
 }
 
 model GatePassEntry {

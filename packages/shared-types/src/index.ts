@@ -58,6 +58,7 @@ export interface CreateSocietyDto {
     districtId: string;
     address?: string;
     contactNo?: string;
+    block?: string;
 }
 
 export interface SocietyResponse {
@@ -67,6 +68,7 @@ export interface SocietyResponse {
     districtId: string;
     address?: string;
     contactNo?: string;
+    block?: string;
     district?: DistrictResponse;
     createdAt: Date | string;
     updatedAt: Date | string;
@@ -90,6 +92,28 @@ export interface PartyResponse {
     address?: string;
     societyId: string;
     society?: SocietyResponse;
+    createdAt: Date | string;
+    updatedAt: Date | string;
+}
+
+// ============ Vehicle DTOs ============
+
+export interface CreateVehicleDto {
+    vehicleNo: string;
+    vehicleType: 'TRACTOR' | 'TRUCK' | 'TATA_ACE';
+}
+
+export interface UpdateVehicleDto {
+    vehicleNo?: string;
+    vehicleType?: 'TRACTOR' | 'TRUCK' | 'TATA_ACE';
+    isActive?: boolean;
+}
+
+export interface VehicleResponse {
+    id: string;
+    vehicleNo: string;
+    vehicleType: string;
+    isActive: boolean;
     createdAt: Date | string;
     updatedAt: Date | string;
 }
