@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty, IsNumber, IsOptional, IsDateString, Min, Matches, IsInt, IsEnum } from 'class-validator';
+import { SearchFilterDto } from '../../common/query-optimization.dto';
 
 export enum VehicleType {
     TRACTOR = 'TRACTOR',
@@ -93,3 +94,29 @@ export class UpdateGateEntryDto {
     @IsOptional()
     societyId?: string;
 }
+
+/**
+ * DTO for gate entry filtering and pagination
+ */
+export class GateEntryFilterDto extends SearchFilterDto {
+    @IsString()
+    @IsOptional()
+    societyId?: string;
+
+    @IsString()
+    @IsOptional()
+    districtId?: string;
+
+    @IsString()
+    @IsOptional()
+    seasonId?: string;
+
+    @IsString()
+    @IsOptional()
+    partyId?: string;
+
+    @IsEnum(VehicleType)
+    @IsOptional()
+    vehicleType?: VehicleType;
+}
+

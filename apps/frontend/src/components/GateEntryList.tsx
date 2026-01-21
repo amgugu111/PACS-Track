@@ -1,101 +1,97 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     Box,
     Paper,
     Typography,
-    TextField,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    TablePagination,
     IconButton,
     Tooltip,
-    CircularProgress,
     Alert,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
     Button,
-    InputAdornment,
-    Chip,
     FormControl,
     InputLabel,
     Select,
     MenuItem,
+    Chip,
+    Stack,
 } from '@mui/material';
 import {
     Edit as EditIcon,
     Delete as DeleteIcon,
-    Search as SearchIcon,
     Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { useGateEntries, deleteGateEntry, updateGateEntry, useSeasons, useActiveSeason } from '@/hooks/useApi';
-import type { GateEntryResponse, UpdateGateEntryDto } from '@pacs-track/shared-types';
+import { useGateEntries, deleteGateEntry, useSeasons, useActiveSeason, useSocieties, useDistricts } from '@/hooks/useApi';
+import type { GateEntryResponse } from '@pacs-track/shared-types';
 import { format } from 'date-fns';
+import DataTable, { type Column } from './shared/DataTable';
+import SearchBar from './shared/SearchBar';
 
-interface GateEntryListProps {
+interface GateEntryListOptimizedProps {
     onEdit?: (entry: GateEntryResponse) => void;
 }
 
-export default function GateEntryList({ onEdit }: GateEntryListProps) {
+export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimizedProps) {
+    // Filter states
     const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [sortBy, setSortBy] = useState('date');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
+    const [selectedSocietyId, setSelectedSocietyId] = useState<string>('');
+    const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
+    
+    // Dialog states
     const [selectedEntry, setSelectedEntry] = useState<GateEntryResponse | null>(null);
-    const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [error, setError] = useState('');
-    const [selectedSeasonId, setSelectedSeasonId] = useState<number | 'all'>('all');
-
-    const { seasons } = useSeasons();
-    const { activeSeason } = useActiveSeason();
     const [success, setSuccess] = useState('');
 
-    // Preselect active season
-    useEffect(() => {
-        if (activeSeason && selectedSeasonId === 'all') {
-            const seasonId = parseInt(activeSeason.id, 10);
-            if (!isNaN(seasonId)) {
-                setSelectedSeasonId(seasonId);
-            }
-        }
-    }, [activeSeason, selectedSeasonId]);
+    // Fetch data
+    const { seasons } = useSeasons();
+    const { activeSeason } = useActiveSeason();
+    const { societies } = useSocieties({});
+    const { districts } = useDistricts();
 
-    // Debounce search term
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchTerm);
-            setPage(0); // Reset to first page on new search
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [searchTerm]);
-
-    // Fetch entries with search filter
+    // Fetch gate entries with all filters
     const { entries, total, isLoading, isError, mutate } = useGateEntries({
-        search: debouncedSearch || undefined,
+        search: searchTerm || undefined,
+        page: page + 1, // API uses 1-based pagination
+        limit: rowsPerPage,
+        sortBy,
+        sortOrder,
+        seasonId: selectedSeasonId || undefined,
+        societyId: selectedSocietyId || undefined,
+        districtId: selectedDistrictId || undefined,
     });
 
-    const handleChangePage = (_: unknown, newPage: number) => {
+    const handleSearch = useCallback((value: string) => {
+        setSearchTerm(value);
+        setPage(0); // Reset to first page on search
+    }, []);
+
+    const handlePageChange = useCallback((newPage: number) => {
         setPage(newPage);
-    };
+    }, []);
 
-    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
+    const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
+        setRowsPerPage(newRowsPerPage);
         setPage(0);
-    };
+    }, []);
 
-    const handleEditClick = (entry: GateEntryResponse) => {
-        setSelectedEntry(entry);
-        setEditDialogOpen(true);
-    };
+    const handleSortChange = useCallback((columnId: string) => {
+        if (sortBy === columnId) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(columnId);
+            setSortOrder('asc');
+        }
+    }, [sortBy, sortOrder]);
 
     const handleDeleteClick = (entry: GateEntryResponse) => {
         setSelectedEntry(entry);
@@ -110,7 +106,7 @@ export default function GateEntryList({ onEdit }: GateEntryListProps) {
             setSuccess('Entry deleted successfully');
             setDeleteDialogOpen(false);
             setSelectedEntry(null);
-            mutate(); // Refresh the list
+            mutate();
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to delete entry');
         }
@@ -120,16 +116,111 @@ export default function GateEntryList({ onEdit }: GateEntryListProps) {
         mutate();
     };
 
-    // Filter entries by season if selected
-    const filteredEntries = selectedSeasonId === 'all'
-        ? entries
-        : entries.filter((entry: any) => entry.seasonId === selectedSeasonId);
+    const handleClearFilters = () => {
+        setSelectedSeasonId('');
+        setSelectedSocietyId('');
+        setSelectedDistrictId('');
+        setSearchTerm('');
+        setPage(0);
+    };
 
-    // Get paginated entries
-    const paginatedEntries = filteredEntries.slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage
-    );
+    // Define table columns
+    const columns: Column[] = [
+        {
+            id: 'serialNumber',
+            label: 'Serial No.',
+            sortable: true,
+            align: 'center',
+            minWidth: 100,
+        },
+        {
+            id: 'date',
+            label: 'Date',
+            sortable: true,
+            minWidth: 120,
+            format: (value) => format(new Date(value), 'dd/MM/yyyy'),
+        },
+        {
+            id: 'tokenNo',
+            label: 'Token Number',
+            sortable: true,
+            minWidth: 120,
+            format: (value) => <Chip label={value} size="small" color="primary" variant="outlined" />,
+        },
+        {
+            id: 'season',
+            label: 'Season',
+            minWidth: 150,
+            format: (value) => value ? (
+                <Chip
+                    label={`${value.name} (${value.type})`}
+                    size="small"
+                    color={value.type === 'KHARIF' ? 'primary' : 'secondary'}
+                />
+            ) : 'N/A',
+        },
+        {
+            id: 'partyName',
+            label: 'Party Name',
+            sortable: true,
+            minWidth: 150,
+        },
+        {
+            id: 'pacsName',
+            label: 'PACS/PPC Name',
+            sortable: true,
+            minWidth: 150,
+        },
+        {
+            id: 'vehicleNo',
+            label: 'Vehicle No.',
+            sortable: true,
+            minWidth: 120,
+        },
+        {
+            id: 'bags',
+            label: 'Bags',
+            sortable: true,
+            align: 'right',
+            minWidth: 80,
+        },
+        {
+            id: 'quantity',
+            label: 'Quantity',
+            sortable: true,
+            align: 'right',
+            minWidth: 100,
+            format: (value) => value.toFixed(2),
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'center',
+            minWidth: 120,
+            format: (_, row) => (
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    <Tooltip title="Edit">
+                        <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => onEdit?.(row)}
+                        >
+                            <EditIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                        <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteClick(row)}
+                        >
+                            <DeleteIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
+            ),
+        },
+    ];
 
     if (isError) {
         return (
@@ -139,176 +230,140 @@ export default function GateEntryList({ onEdit }: GateEntryListProps) {
         );
     }
 
+    const hasActiveFilters = selectedSeasonId || selectedSocietyId || selectedDistrictId || searchTerm;
+
     return (
-        <Paper elevation={3} sx={{ p: 3 }}>
-            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h5" fontWeight="bold" color="primary">
-                    Gate Entry Records
-                </Typography>
-                <Tooltip title="Refresh">
-                    <IconButton onClick={handleRefresh} color="primary">
-                        <RefreshIcon />
-                    </IconButton>
-                </Tooltip>
-            </Box>
-
-            {success && (
-                <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
-                    {success}
-                </Alert>
-            )}
-
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-                    {error}
-                </Alert>
-            )}
-
-            {/* Search Bar and Season Filter */}
-            <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-                <TextField
-                    fullWidth
-                    placeholder="Search by party name, vehicle number, token number, or PACS name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <SearchIcon />
-                            </InputAdornment>
-                        ),
-                    }}
-                />
-                <FormControl sx={{ minWidth: 200 }}>
-                    <InputLabel>Season</InputLabel>
-                    <Select
-                        value={selectedSeasonId}
-                        onChange={(e) => setSelectedSeasonId(e.target.value as number | 'all')}
-                        label="Season"
-                    >
-                        <MenuItem value="all">All Seasons</MenuItem>
-                        {seasons?.map((season: any) => (
-                            <MenuItem key={season.id} value={season.id}>
-                                {season.name} - {season.type}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-            </Box>
-
-            {/* Table */}
-            <TableContainer>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell><strong>Serial No.</strong></TableCell>
-                            <TableCell><strong>Date</strong></TableCell>
-                            <TableCell><strong>Token Number</strong></TableCell>
-                            <TableCell><strong>Season</strong></TableCell>
-                            <TableCell><strong>Party Name</strong></TableCell>
-                            <TableCell><strong>PACS/PPC Name</strong></TableCell>
-                            <TableCell><strong>Vehicle No.</strong></TableCell>
-                            <TableCell><strong>Bags</strong></TableCell>
-                            <TableCell><strong>Quantity</strong></TableCell>
-                            <TableCell><strong>Actions</strong></TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
-                                    <CircularProgress />
-                                </TableCell>
-                            </TableRow>
-                        ) : paginatedEntries.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
-                                    <Typography variant="body1" color="text.secondary">
-                                        No entries found
-                                    </Typography>
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            paginatedEntries.map((entry) => (
-                                <TableRow key={entry.id} hover>
-                                    <TableCell>{entry.serialNumber}</TableCell>
-                                    <TableCell>
-                                        {format(new Date(entry.date), 'dd/MM/yyyy')}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip label={entry.tokenNo} size="small" color="primary" variant="outlined" />
-                                    </TableCell>
-                                    <TableCell>
-                                        {entry.season ? (
-                                            <Chip
-                                                label={`${entry.season.name} (${entry.season.type})`}
-                                                size="small"
-                                                color={entry.season.type === 'KHARIF' ? 'primary' : 'secondary'}
-                                            />
-                                        ) : (
-                                            <Typography variant="caption" color="text.secondary">N/A</Typography>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>{entry.partyName}</TableCell>
-                                    <TableCell>{entry.pacsName}</TableCell>
-                                    <TableCell>{entry.vehicleNo}</TableCell>
-                                    <TableCell>{entry.bags}</TableCell>
-                                    <TableCell>{entry.quantity.toFixed(2)}</TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Tooltip title="Edit">
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    onClick={() => handleEditClick(entry)}
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete">
-                                                <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() => handleDeleteClick(entry)}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+        <Box>
+            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h5" fontWeight="bold" color="primary">
+                        Gate Entry Records
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        {hasActiveFilters && (
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={handleClearFilters}
+                            >
+                                Clear Filters
+                            </Button>
                         )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        <Tooltip title="Refresh">
+                            <IconButton onClick={handleRefresh} color="primary">
+                                <RefreshIcon />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                </Box>
 
-            {/* Pagination */}
-            <TablePagination
-                rowsPerPageOptions={[5, 10, 25, 50]}
-                component="div"
-                count={filteredEntries.length}
-                rowsPerPage={rowsPerPage}
+                {success && (
+                    <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+                        {success}
+                    </Alert>
+                )}
+
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+                        {error}
+                    </Alert>
+                )}
+
+                {/* Filters */}
+                <Stack spacing={2} sx={{ mb: 3 }}>
+                    <SearchBar
+                        placeholder="Search by party name, vehicle number, token number, or PACS name..."
+                        onSearch={handleSearch}
+                    />
+                    
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <FormControl sx={{ minWidth: 200 }}>
+                            <InputLabel>Season</InputLabel>
+                            <Select
+                                value={selectedSeasonId}
+                                onChange={(e) => {
+                                    setSelectedSeasonId(e.target.value);
+                                    setPage(0);
+                                }}
+                                label="Season"
+                            >
+                                <MenuItem value="">All Seasons</MenuItem>
+                                {seasons?.map((season: any) => (
+                                    <MenuItem key={season.id} value={season.id}>
+                                        {season.name} - {season.type}
+                                        {season.isActive && ' (Active)'}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl sx={{ minWidth: 200 }}>
+                            <InputLabel>District</InputLabel>
+                            <Select
+                                value={selectedDistrictId}
+                                onChange={(e) => {
+                                    setSelectedDistrictId(e.target.value);
+                                    setSelectedSocietyId(''); // Clear society when district changes
+                                    setPage(0);
+                                }}
+                                label="District"
+                            >
+                                <MenuItem value="">All Districts</MenuItem>
+                                {districts?.map((district: any) => (
+                                    <MenuItem key={district.id} value={district.id}>
+                                        {district.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl sx={{ minWidth: 250 }}>
+                            <InputLabel>Society</InputLabel>
+                            <Select
+                                value={selectedSocietyId}
+                                onChange={(e) => {
+                                    setSelectedSocietyId(e.target.value);
+                                    setPage(0);
+                                }}
+                                label="Society"
+                                disabled={!societies || societies.length === 0}
+                            >
+                                <MenuItem value="">All Societies</MenuItem>
+                                {societies
+                                    ?.filter((society: any) => 
+                                        !selectedDistrictId || society.districtId === selectedDistrictId
+                                    )
+                                    .map((society: any) => (
+                                        <MenuItem key={society.id} value={society.id}>
+                                            {society.name} ({society.code})
+                                        </MenuItem>
+                                    ))}
+                            </Select>
+                        </FormControl>
+                    </Box>
+                </Stack>
+
+                {/* Results summary */}
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Showing {entries.length} of {total.toLocaleString()} entries
+                    {hasActiveFilters && ' (filtered)'}
+                </Typography>
+            </Paper>
+
+            {/* Data Table */}
+            <DataTable
+                columns={columns}
+                rows={entries}
+                total={total}
                 page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-
-            {/* Edit Dialog */}
-            <EditEntryDialog
-                open={editDialogOpen}
-                entry={selectedEntry}
-                onClose={() => {
-                    setEditDialogOpen(false);
-                    setSelectedEntry(null);
-                }}
-                onSuccess={() => {
-                    setSuccess('Entry updated successfully');
-                    setEditDialogOpen(false);
-                    setSelectedEntry(null);
-                    mutate();
-                }}
-                onError={(msg) => setError(msg)}
+                rowsPerPage={rowsPerPage}
+                isLoading={isLoading}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onPageChange={handlePageChange}
+                onRowsPerPageChange={handleRowsPerPageChange}
+                onSortChange={handleSortChange}
+                emptyMessage="No gate entries found. Try adjusting your filters."
             />
 
             {/* Delete Confirmation Dialog */}
@@ -339,128 +394,6 @@ export default function GateEntryList({ onEdit }: GateEntryListProps) {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Paper>
-    );
-}
-
-// Edit Entry Dialog Component
-interface EditEntryDialogProps {
-    open: boolean;
-    entry: GateEntryResponse | null;
-    onClose: () => void;
-    onSuccess: () => void;
-    onError: (message: string) => void;
-}
-
-function EditEntryDialog({ open, entry, onClose, onSuccess, onError }: EditEntryDialogProps) {
-    const [tokenNo, setTokenNo] = useState('');
-    const [partyName, setPartyName] = useState('');
-    const [vehicleNo, setVehicleNo] = useState('');
-    const [bags, setBags] = useState<number>(0);
-    const [quantity, setQuantity] = useState<number>(0);
-    const [remarks, setRemarks] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (entry) {
-            setTokenNo(entry.tokenNo);
-            setPartyName(entry.partyName);
-            setVehicleNo(entry.vehicleNo || '');
-            setBags(entry.bags);
-            setQuantity(entry.quantity);
-            setRemarks(entry.remarks || '');
-        }
-    }, [entry]);
-
-    const handleSubmit = async () => {
-        if (!entry) return;
-
-        setLoading(true);
-        try {
-            const dto: UpdateGateEntryDto = {
-                tokenNo,
-                partyName,
-                vehicleNo,
-                bags,
-                quantity,
-                remarks: remarks || undefined,
-            };
-
-            await updateGateEntry(entry.id, dto);
-            onSuccess();
-        } catch (err: any) {
-            onError(err.response?.data?.message || 'Failed to update entry');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Edit Gate Entry</DialogTitle>
-            <DialogContent>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-                    <TextField
-                        label="Token Number"
-                        value={tokenNo}
-                        onChange={(e) => setTokenNo(e.target.value)}
-                        fullWidth
-                        required
-                    />
-                    <TextField
-                        label="Party Name"
-                        value={partyName}
-                        onChange={(e) => setPartyName(e.target.value)}
-                        fullWidth
-                        required
-                    />
-                    <TextField
-                        label="Vehicle Number"
-                        value={vehicleNo}
-                        onChange={(e) => setVehicleNo(e.target.value.toUpperCase())}
-                        fullWidth
-                        required
-                    />
-                    <TextField
-                        label="Bags"
-                        type="number"
-                        value={bags}
-                        onChange={(e) => setBags(Number(e.target.value))}
-                        fullWidth
-                        required
-                        inputProps={{ min: 1 }}
-                    />
-                    <TextField
-                        label="Quantity"
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => setQuantity(Number(e.target.value))}
-                        fullWidth
-                        required
-                        inputProps={{ min: 0.01, step: 0.01 }}
-                    />
-                    <TextField
-                        label="Remarks"
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                        fullWidth
-                        multiline
-                        rows={2}
-                    />
-                </Box>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} disabled={loading}>
-                    Cancel
-                </Button>
-                <Button
-                    onClick={handleSubmit}
-                    variant="contained"
-                    disabled={loading}
-                >
-                    {loading ? <CircularProgress size={24} /> : 'Save Changes'}
-                </Button>
-            </DialogActions>
-        </Dialog>
+        </Box>
     );
 }

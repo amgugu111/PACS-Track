@@ -58,6 +58,8 @@ model District {
   @@unique([name, riceMillId])
   @@unique([code, riceMillId])
   @@index([riceMillId])
+  @@index([name])
+  @@index([state])
   @@map("districts")
 }
 
@@ -79,6 +81,9 @@ model Society {
 
   @@unique([code, riceMillId])
   @@index([riceMillId])
+  @@index([districtId])
+  @@index([name])
+  @@index([riceMillId, districtId])
   @@map("societies")
 }
 
@@ -94,6 +99,10 @@ model Party {
   gatePassEntries GatePassEntry[]
   society         Society         @relation(fields: [societyId], references: [id], onDelete: Cascade)
 
+  @@index([societyId])
+  @@index([name])
+  @@index([phone])
+  @@index([societyId, name])
   @@map("parties")
 }
 
@@ -134,6 +143,16 @@ model GatePassEntry {
   @@index([societyId])
   @@index([partyId])
   @@index([seasonId])
+  @@index([districtId])
+  @@index([pacsName])
+  @@index([challanNo])
+  @@index([riceMillId, seasonId])
+  @@index([riceMillId, date])
+  @@index([riceMillId, societyId])
+  @@index([riceMillId, districtId])
+  @@index([seasonId, societyId])
+  @@index([seasonId, date])
+  @@index([date, riceMillId, seasonId])
   @@map("gate_pass_entries")
 }
 
@@ -152,6 +171,8 @@ model Season {
   @@unique([name, type, riceMillId])
   @@index([riceMillId])
   @@index([isActive])
+  @@index([riceMillId, isActive])
+  @@index([type])
   @@map("seasons")
 }
 

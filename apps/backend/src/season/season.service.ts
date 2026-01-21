@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSeasonDto, UpdateSeasonDto, SetTargetDto } from './dto/season.dto';
+import { QueryOptimizationHelper } from '../common/query-optimization.helper';
 
 @Injectable()
 export class SeasonService {
@@ -25,11 +26,19 @@ export class SeasonService {
         });
     }
 
+    /**
+     * Find all seasons with OPTIMIZED counts
+     */
     async findAll(riceMillId: string) {
         return this.prisma.season.findMany({
             where: { riceMillId },
-            orderBy: { createdAt: 'desc' },
-            include: {
+            select: {
+                id: true,
+                name: true,
+                type: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
                 _count: {
                     select: {
                         gatePassEntries: true,
@@ -37,12 +46,23 @@ export class SeasonService {
                     },
                 },
             },
+            orderBy: { createdAt: 'desc' },
         });
     }
 
+    /**
+     * Find active season - OPTIMIZED with index usage
+     */
     async findActive(riceMillId: string) {
         const activeSeason = await this.prisma.season.findFirst({
             where: { riceMillId, isActive: true },
+            select: {
+                id: true,
+                name: true,
+                type: true,
+                isActive: true,
+                createdAt: true,
+            },
         });
 
         if (!activeSeason) {
@@ -52,13 +72,40 @@ export class SeasonService {
         return activeSeason;
     }
 
+    /**
+     * Find one season by ID - OPTIMIZED with selective includes
+     */
     async findOne(id: string, riceMillId: string) {
         const season = await this.prisma.season.findFirst({
             where: { id, riceMillId },
-            include: {
+            select: {
+                id: true,
+                name: true,
+                type: true,
+                isActive: true,
+                createdAt: true,
+                updatedAt: true,
                 targets: {
-                    include: {
-                        society: true,
+                    select: {
+                        id: true,
+                        targetQuantity: true,
+                        society: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        society: {
+                            name: 'asc',
+                        },
+                    },
+                },
+                _count: {
+                    select: {
+                        gatePassEntries: true,
                     },
                 },
             },

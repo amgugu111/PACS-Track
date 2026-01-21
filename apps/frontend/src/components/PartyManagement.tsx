@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     Box,
     Button,
@@ -9,25 +9,39 @@ import {
     DialogContent,
     DialogActions,
     TextField,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
     IconButton,
     Typography,
     Alert,
     MenuItem,
+    Paper,
+    FormControl,
+    InputLabel,
+    Select,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useSocieties, useParties, createParty, updateParty, deleteParty } from '@/hooks/useApi';
-import { mutate } from 'swr';
+import DataTable, { type Column } from './shared/DataTable';
+import SearchBar from './shared/SearchBar';
 
-export default function PartyManagement() {
-    const { societies } = useSocieties();
-    const { parties, isLoading, isError } = useParties();
+export default function PartyManagementOptimized() {
+    // Filters
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSocietyId, setSelectedSocietyId] = useState('');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [sortBy, setSortBy] = useState('name');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+    const { societies } = useSocieties({});
+    const { parties, total, isLoading, isError, mutate } = useParties({
+        societyId: selectedSocietyId || undefined,
+        search: searchTerm || undefined,
+        page: page + 1,
+        limit: rowsPerPage,
+        sortBy,
+        sortOrder,
+    });
+
     const [openDialog, setOpenDialog] = useState(false);
     const [editingParty, setEditingParty] = useState<any>(null);
     const [formData, setFormData] = useState({
@@ -39,6 +53,29 @@ export default function PartyManagement() {
     });
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+
+    const handleSearch = useCallback((value: string) => {
+        setSearchTerm(value);
+        setPage(0);
+    }, []);
+
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+    }, []);
+
+    const handleRowsPerPageChange = useCallback((newRowsPerPage: number) => {
+        setRowsPerPage(newRowsPerPage);
+        setPage(0);
+    }, []);
+
+    const handleSortChange = useCallback((columnId: string) => {
+        if (sortBy === columnId) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(columnId);
+            setSortOrder('asc');
+        }
+    }, [sortBy, sortOrder]);
 
     const handleOpenDialog = (party?: any) => {
         if (party) {
@@ -92,7 +129,7 @@ export default function PartyManagement() {
                 setSuccess('Party created successfully');
             }
 
-            await mutate('/parties');
+            await mutate();
             handleCloseDialog();
 
             setTimeout(() => setSuccess(null), 3000);
@@ -109,7 +146,7 @@ export default function PartyManagement() {
         try {
             await deleteParty(party.id);
             setSuccess('Party deleted successfully');
-            await mutate('/parties');
+            await mutate();
 
             setTimeout(() => setSuccess(null), 3000);
         } catch (err: any) {
@@ -118,9 +155,65 @@ export default function PartyManagement() {
         }
     };
 
-    if (isLoading) {
-        return <Typography>Loading parties...</Typography>;
-    }
+    const columns: Column[] = [
+        {
+            id: 'name',
+            label: 'Name',
+            sortable: true,
+            minWidth: 180,
+        },
+        {
+            id: 'fatherName',
+            label: "Father's Name",
+            sortable: true,
+            minWidth: 180,
+            format: (value) => value || '-',
+        },
+        {
+            id: 'phoneNumber',
+            label: 'Phone Number',
+            sortable: true,
+            minWidth: 130,
+            format: (value) => value || '-',
+        },
+        {
+            id: 'society',
+            label: 'Society',
+            sortable: true,
+            minWidth: 200,
+            format: (value) => value ? `${value.name} (${value.code})` : '-',
+        },
+        {
+            id: 'address',
+            label: 'Address',
+            minWidth: 200,
+            format: (value) => value || '-',
+        },
+        {
+            id: 'actions',
+            label: 'Actions',
+            align: 'center',
+            minWidth: 120,
+            format: (_, row) => (
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleOpenDialog(row)}
+                    >
+                        <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDelete(row)}
+                    >
+                        <DeleteIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+            ),
+        },
+    ];
 
     if (isError) {
         return <Alert severity="error">Failed to load parties</Alert>;
@@ -128,84 +221,82 @@ export default function PartyManagement() {
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5">Party Management</Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog()}
-                    disabled={!societies || societies.length === 0}
-                >
-                    Add Party
-                </Button>
-            </Box>
+            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h5" fontWeight="bold">Party Management</Typography>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => handleOpenDialog()}
+                        disabled={!societies || societies.length === 0}
+                    >
+                        Add Party
+                    </Button>
+                </Box>
 
-            {!societies || societies.length === 0 ? (
-                <Alert severity="info">Please add at least one society before creating parties.</Alert>
-            ) : null}
+                {!societies || societies.length === 0 ? (
+                    <Alert severity="info">Please add at least one society before creating parties.</Alert>
+                ) : null}
 
-            {success && (
-                <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-                    {success}
-                </Alert>
-            )}
+                {success && (
+                    <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+                        {success}
+                    </Alert>
+                )}
 
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-                    {error}
-                </Alert>
-            )}
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                        {error}
+                    </Alert>
+                )}
 
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell><strong>#</strong></TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Father's Name</TableCell>
-                            <TableCell>Phone Number</TableCell>
-                            <TableCell>Society</TableCell>
-                            <TableCell>Address</TableCell>
-                            <TableCell align="right">Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {parties?.map((party: any, index: number) => (
-                            <TableRow key={party.id}>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell>{party.name}</TableCell>
-                                <TableCell>{party.fatherName || '-'}</TableCell>
-                                <TableCell>{party.phoneNumber || '-'}</TableCell>
-                                <TableCell>{party.society?.name || '-'}</TableCell>
-                                <TableCell>{party.address || '-'}</TableCell>
-                                <TableCell align="right">
-                                    <IconButton
-                                        size="small"
-                                        color="primary"
-                                        onClick={() => handleOpenDialog(party)}
-                                    >
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleDelete(party)}
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {(!parties || parties.length === 0) && (
-                            <TableRow>
-                                <TableCell colSpan={6} align="center">
-                                    No parties found
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                {/* Filters */}
+                <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+                    <Box sx={{ flex: 1 }}>
+                        <SearchBar
+                            placeholder="Search by party name, father's name, or phone number..."
+                            onSearch={handleSearch}
+                        />
+                    </Box>
+                    <FormControl sx={{ minWidth: 250 }}>
+                        <InputLabel>Filter by Society</InputLabel>
+                        <Select
+                            value={selectedSocietyId}
+                            onChange={(e) => {
+                                setSelectedSocietyId(e.target.value);
+                                setPage(0);
+                            }}
+                            label="Filter by Society"
+                        >
+                            <MenuItem value="">All Societies</MenuItem>
+                            {societies?.map((society: any) => (
+                                <MenuItem key={society.id} value={society.id}>
+                                    {society.name} ({society.code})
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Showing {parties.length} of {total.toLocaleString()} parties
+                </Typography>
+            </Paper>
+
+            <DataTable
+                columns={columns}
+                rows={parties}
+                total={total}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                isLoading={isLoading}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onPageChange={handlePageChange}
+                onRowsPerPageChange={handleRowsPerPageChange}
+                onSortChange={handleSortChange}
+                emptyMessage="No parties found"
+            />
 
             <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
                 <DialogTitle>

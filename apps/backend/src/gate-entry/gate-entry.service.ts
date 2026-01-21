@@ -1,13 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateGateEntryDto, UpdateGateEntryDto } from './dto/gate-entry.dto';
+import { CreateGateEntryDto, UpdateGateEntryDto, GateEntryFilterDto } from './dto/gate-entry.dto';
+import { QueryOptimizationHelper } from '../common/query-optimization.helper';
+import { PaginatedResponse } from '../common/query-optimization.dto';
 
 @Injectable()
 export class GateEntryService {
     constructor(private readonly prisma: PrismaService) { }
 
     /**
-     * Smart Gate Entry Creation with Party Upsert Logic
+     * Smart Gate Entry Creation with Party Upsert Logic - OPTIMIZED
      * 
      * Process:
      * 1. Get or validate active season
@@ -17,55 +19,61 @@ export class GateEntryService {
      * 5. Create gate pass entry with all relationships
      */
     async createGateEntry(dto: CreateGateEntryDto, riceMillId: string) {
-        // Step 1: Get active season if not provided
-        let seasonId = dto.seasonId;
-        if (!seasonId) {
-            const activeSeason = await this.prisma.season.findFirst({
-                where: { riceMillId, isActive: true },
-            });
-            if (!activeSeason) {
-                throw new BadRequestException('No active season found. Please activate a season first.');
-            }
-            seasonId = activeSeason.id;
-        } else {
-            // Validate provided season
-            const season = await this.prisma.season.findFirst({
-                where: { id: seasonId, riceMillId },
-            });
-            if (!season) {
-                throw new NotFoundException('Season not found');
-            }
-            if (!season.isActive) {
-                throw new BadRequestException('Cannot add entries to inactive season');
-            }
+        // Parallel query optimization: Fetch active season and validate society in parallel
+        const [activeSeason, society] = await Promise.all([
+            dto.seasonId
+                ? this.prisma.season.findFirst({
+                    where: { id: dto.seasonId, riceMillId },
+                    select: { id: true, isActive: true }, // Select only needed fields
+                })
+                : this.prisma.season.findFirst({
+                    where: { riceMillId, isActive: true },
+                    select: { id: true, isActive: true },
+                }),
+            this.prisma.society.findFirst({
+                where: {
+                    id: dto.societyId,
+                    riceMillId: riceMillId,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    districtId: true,
+                }, // Select only needed fields
+            }),
+        ]);
+
+        // Validate season
+        if (!activeSeason) {
+            throw new BadRequestException(
+                dto.seasonId ? 'Season not found' : 'No active season found. Please activate a season first.'
+            );
+        }
+        if (!activeSeason.isActive) {
+            throw new BadRequestException('Cannot add entries to inactive season');
         }
 
-        // Step 2: Validate Society and get District
-        const society = await this.prisma.society.findFirst({
-            where: {
-                id: dto.societyId,
-                riceMillId: riceMillId,
-            },
-            include: { district: true },
-        });
-
+        // Validate society
         if (!society) {
             throw new NotFoundException(`Society with ID ${dto.societyId} not found or access denied`);
         }
 
-        // Step 2: Check for duplicate token number within the rice mill
-        const existingToken = await this.prisma.gatePassEntry.findFirst({
-            where: {
-                tokenNo: dto.tokenNo,
-                riceMillId: riceMillId,
-            },
-        });
+        // Parallel validation: Check duplicate token and validate inputs
+        const [existingToken] = await Promise.all([
+            this.prisma.gatePassEntry.findFirst({
+                where: {
+                    tokenNo: dto.tokenNo,
+                    riceMillId: riceMillId,
+                },
+                select: { id: true }, // Only select id for existence check
+            }),
+        ]);
 
         if (existingToken) {
             throw new ConflictException(`Gate pass with token number ${dto.tokenNo} already exists`);
         }
 
-        // Step 3: Validate quantity and bags
+        // Validate quantity and bags
         if (dto.quantity <= 0) {
             throw new BadRequestException('Quantity must be greater than 0');
         }
@@ -74,18 +82,19 @@ export class GateEntryService {
             throw new BadRequestException('Number of bags must be greater than 0');
         }
 
-        // Step 4: Smart Party Upsert - Check if party exists by name
+        // Smart Party Upsert - Check if party exists by name (case-insensitive)
         let party = await this.prisma.party.findFirst({
             where: {
                 name: {
                     equals: dto.partyName.trim(),
-                    mode: 'insensitive', // Case-insensitive search
+                    mode: 'insensitive',
                 },
                 societyId: dto.societyId,
             },
+            select: { id: true, name: true },
         });
 
-        // Step 5: If party doesn't exist, create new party
+        // If party doesn't exist, create new party
         if (!party) {
             console.log(`Creating new party: ${dto.partyName}`);
             party = await this.prisma.party.create({
@@ -93,12 +102,13 @@ export class GateEntryService {
                     name: dto.partyName.trim(),
                     societyId: dto.societyId,
                 },
+                select: { id: true, name: true },
             });
         } else {
             console.log(`Using existing party: ${party.name} (ID: ${party.id})`);
         }
 
-        // Step 6: Create Gate Pass Entry
+        // Step 6: Create Gate Pass Entry with optimized select
         const gateEntry = await this.prisma.gatePassEntry.create({
             data: {
                 tokenNo: dto.tokenNo,
@@ -114,17 +124,44 @@ export class GateEntryService {
                 societyId: dto.societyId,
                 partyId: party.id,
                 districtId: society.districtId,
-                seasonId: seasonId,
+                seasonId: activeSeason.id,
             },
             include: {
                 society: {
-                    include: {
-                        district: true,
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true,
+                        district: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true,
+                            },
+                        },
                     },
                 },
-                party: true,
-                district: true,
-                season: true,
+                party: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                    },
+                },
+                district: {
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true,
+                    },
+                },
+                season: {
+                    select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                    },
+                },
             },
         });
 
@@ -133,89 +170,125 @@ export class GateEntryService {
     }
 
     /**
-     * Get all gate entries with optional filters and search
+     * Get all gate entries with OPTIMIZED filters, search, and pagination
      */
-    async findAll(filters?: {
-        riceMillId: string;
-        societyId?: string;
-        districtId?: string;
-        seasonId?: string;
-        fromDate?: string;
-        toDate?: string;
-        search?: string; // Search term for party name, vehicle no, token no, PACS name
-        page?: number;
-        limit?: number;
-    }) {
-        const page = filters?.page || 1;
-        const limit = filters?.limit || 50;
-        const skip = (page - 1) * limit;
+    async findAll(filters: GateEntryFilterDto & { riceMillId: string }): Promise<PaginatedResponse<any>> {
+        const page = filters.page || 1;
+        const limit = Math.min(filters.limit || 50, 100); // Max 100 per page
+        const skip = QueryOptimizationHelper.calculateSkip(page, limit);
 
+        // Build WHERE clause efficiently
         const where: any = {
             riceMillId: filters.riceMillId,
         };
 
-        if (filters?.seasonId) {
-            where.seasonId = filters.seasonId;
+        // Add optional filters
+        if (filters.seasonId) where.seasonId = filters.seasonId;
+        if (filters.societyId) where.societyId = filters.societyId;
+        if (filters.districtId) where.districtId = filters.districtId;
+        if (filters.partyId) where.partyId = filters.partyId;
+        if (filters.vehicleType) where.vehicleType = filters.vehicleType;
+
+        // Add date range filter
+        const dateFilter = QueryOptimizationHelper.buildDateRangeFilter(
+            filters.fromDate,
+            filters.toDate,
+            'date'
+        );
+        if (dateFilter) {
+            Object.assign(where, dateFilter);
         }
 
-        if (filters?.societyId) {
-            where.societyId = filters.societyId;
-        }
-
-        if (filters?.districtId) {
-            where.districtId = filters.districtId;
-        }
-
-        if (filters?.fromDate || filters?.toDate) {
-            where.date = {};
-            if (filters.fromDate) {
-                where.date.gte = new Date(filters.fromDate);
+        // Add search functionality across multiple fields
+        if (filters.search) {
+            const searchConditions = QueryOptimizationHelper.buildSearchCondition(
+                filters.search,
+                ['partyName', 'pacsName', 'vehicleNo', 'tokenNo', 'challanNo']
+            );
+            if (searchConditions) {
+                where.OR = searchConditions;
             }
-            if (filters.toDate) {
-                where.date.lte = new Date(filters.toDate);
-            }
         }
 
-        // Add search functionality
-        if (filters?.search) {
-            const searchTerm = filters.search.trim();
-            where.OR = [
-                { partyName: { contains: searchTerm, mode: 'insensitive' } },
-                { pacsName: { contains: searchTerm, mode: 'insensitive' } },
-                { vehicleNo: { contains: searchTerm, mode: 'insensitive' } },
-                { tokenNo: { contains: searchTerm, mode: 'insensitive' } },
-            ];
-        }
+        // Build orderBy clause
+        const orderBy = QueryOptimizationHelper.buildOrderBy(
+            filters.sortBy || 'serialNumber',
+            filters.sortOrder || 'desc'
+        );
 
+        // Execute query and count in parallel
         const [entries, total] = await Promise.all([
             this.prisma.gatePassEntry.findMany({
                 where,
-                include: {
+                // Use selective includes to prevent over-fetching
+                select: {
+                    id: true,
+                    serialNumber: true,
+                    tokenNo: true,
+                    date: true,
+                    partyName: true,
+                    pacsName: true,
+                    vehicleType: true,
+                    vehicleNo: true,
+                    bags: true,
+                    quantity: true,
+                    remarks: true,
+                    challanNo: true,
                     society: {
-                        include: { district: true },
+                        select: {
+                            id: true,
+                            name: true,
+                            code: true,
+                            district: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    code: true,
+                                },
+                            },
+                        },
                     },
-                    party: true,
-                    district: true,
-                    season: true,
+                    party: {
+                        select: {
+                            id: true,
+                            name: true,
+                            phone: true,
+                        },
+                    },
+                    district: {
+                        select: {
+                            id: true,
+                            name: true,
+                            code: true,
+                        },
+                    },
+                    season: {
+                        select: {
+                            id: true,
+                            name: true,
+                            type: true,
+                        },
+                    },
                 },
-                orderBy: { serialNumber: 'desc' }, // Order by serial number (most recent first)
+                orderBy,
                 skip,
                 take: limit,
             }),
             this.prisma.gatePassEntry.count({ where }),
         ]);
 
-        return {
-            data: entries.map(entry => this.enrichWithCalculations(entry)),
+        const enrichedData = entries.map(entry => this.enrichWithCalculations(entry));
+
+        return QueryOptimizationHelper.buildPaginationMeta(
+            enrichedData,
             total,
             page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        };
+            limit
+        );
     }
 
     /**
-     * Get single gate entry by ID
+     * Get single gate entry by ID - OPTIMIZED
      */
     async findOne(id: string, riceMillId: string) {
         const entry = await this.prisma.gatePassEntry.findFirst({
@@ -223,12 +296,56 @@ export class GateEntryService {
                 id,
                 riceMillId,
             },
-            include: {
+            select: {
+                id: true,
+                serialNumber: true,
+                tokenNo: true,
+                date: true,
+                partyName: true,
+                pacsName: true,
+                vehicleType: true,
+                vehicleNo: true,
+                bags: true,
+                quantity: true,
+                remarks: true,
+                challanNo: true,
                 society: {
-                    include: { district: true },
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true,
+                        district: {
+                            select: {
+                                id: true,
+                                name: true,
+                                code: true,
+                            },
+                        },
+                    },
                 },
-                party: true,
-                district: true,
+                party: {
+                    select: {
+                        id: true,
+                        name: true,
+                        fatherName: true,
+                        phone: true,
+                        address: true,
+                    },
+                },
+                district: {
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true,
+                    },
+                },
+                season: {
+                    select: {
+                        id: true,
+                        name: true,
+                        type: true,
+                    },
+                },
             },
         });
 
@@ -319,7 +436,8 @@ export class GateEntryService {
     }
 
     /**
-     * Generate Report Data
+     * Generate Report Data - OPTIMIZED with database aggregations
+     * Uses selective queries based on report type to minimize data transfer
      */
     async generateReport(filters: {
         riceMillId: string;
@@ -330,64 +448,87 @@ export class GateEntryService {
         districtId?: string;
         seasonId?: string;
     }) {
-        const where: any = {
-            riceMillId: filters.riceMillId,
-            date: {
-                gte: new Date(filters.fromDate),
-                lte: new Date(filters.toDate + 'T23:59:59.999Z'),
-            },
+        const dateFilter = {
+            gte: new Date(filters.fromDate),
+            lte: new Date(filters.toDate + 'T23:59:59.999Z'),
         };
 
-        if (filters.societyId) {
-            where.societyId = filters.societyId;
-        }
-
-        if (filters.districtId) {
-            where.districtId = filters.districtId;
-        }
-
-        if (filters.seasonId) {
-            where.seasonId = filters.seasonId;
-        }
-
-        const entries = await this.prisma.gatePassEntry.findMany({
-            where,
-            include: {
-                society: true,
-                district: true,
-                party: true,
-            },
-            orderBy: { date: 'desc' },
-        });
-
+        // Route to optimized report methods based on type
         switch (filters.reportType) {
             case 'daily':
-                return this.generateDailyReport(entries);
+                return this.generateDailyReportOptimized(filters, dateFilter);
             case 'society':
-                return this.generateSocietyReport(entries);
+                return this.generateSocietyReportOptimized(filters, dateFilter);
             case 'society-daywise':
-                return this.generateSocietyDaywiseReport(entries, filters.riceMillId, filters.seasonId);
+                return this.generateSocietyDaywiseReport(filters, dateFilter);
             case 'district':
-                return this.generateDistrictReport(entries);
+                return this.generateDistrictReportOptimized(filters, dateFilter);
             case 'party':
-                return this.generatePartyReport(entries);
+                return this.generatePartyReportOptimized(filters, dateFilter);
             case 'vehicle':
-                return this.generateVehicleReport(entries);
+                return this.generateVehicleReportOptimized(filters, dateFilter);
             case 'summary':
-                return this.generateSummaryReport(entries);
+                return this.generateSummaryReportOptimized(filters, dateFilter);
             default:
-                return entries;
+                // Fallback to fetching entries with selective fields
+                return this.fetchEntriesForReport(filters, dateFilter);
         }
     }
 
-    private generateDailyReport(entries: any[]) {
+    /**
+     * Fetch entries for reports with selective fields only
+     */
+    private async fetchEntriesForReport(filters: any, dateFilter: any) {
+        const where: any = {
+            riceMillId: filters.riceMillId,
+            date: dateFilter,
+        };
+
+        if (filters.societyId) where.societyId = filters.societyId;
+        if (filters.districtId) where.districtId = filters.districtId;
+        if (filters.seasonId) where.seasonId = filters.seasonId;
+
+        return this.prisma.gatePassEntry.findMany({
+            where,
+            select: {
+                id: true,
+                tokenNo: true,
+                date: true,
+                partyName: true,
+                pacsName: true,
+                vehicleNo: true,
+                vehicleType: true,
+                bags: true,
+                quantity: true,
+                remarks: true,
+                society: {
+                    select: {
+                        name: true,
+                    },
+                },
+                district: {
+                    select: {
+                        name: true,
+                    },
+                },
+            },
+            orderBy: { date: 'desc' },
+        });
+    }
+
+    /**
+     * OPTIMIZED: Daily report with selective fields
+     */
+    private async generateDailyReportOptimized(filters: any, dateFilter: any) {
+        const entries = await this.fetchEntriesForReport(filters, dateFilter);
+
         return entries.map(entry => ({
             'Token No': entry.tokenNo,
             'Date': new Date(entry.date).toLocaleDateString(),
             'Society': entry.society?.name || entry.pacsName,
             'District': entry.district?.name || '',
             'Party Name': entry.partyName,
-            'Vehicle No': entry.vehicleNo,
+            'Vehicle No': entry.vehicleNo || '',
             'Bags': entry.bags,
             'Quantity (kg)': entry.quantity,
             'Qty Per Bag': (entry.quantity / entry.bags).toFixed(2),
@@ -395,69 +536,291 @@ export class GateEntryService {
         }));
     }
 
-    private generateSocietyReport(entries: any[]) {
-        const grouped = entries.reduce((acc: any, entry) => {
-            const society = entry.society?.name || entry.pacsName;
-            if (!acc[society]) {
-                acc[society] = {
-                    society,
-                    entries: 0,
-                    totalBags: 0,
-                    totalQuantity: 0,
-                };
-            }
-            acc[society].entries++;
-            acc[society].totalBags += entry.bags;
-            acc[society].totalQuantity += entry.quantity;
-            return acc;
-        }, {});
+    /**
+     * OPTIMIZED: Society report using database aggregation
+     */
+    private async generateSocietyReportOptimized(filters: any, dateFilter: any) {
+        const where: any = {
+            riceMillId: filters.riceMillId,
+            date: dateFilter,
+        };
 
-        return Object.values(grouped).map((item: any) => ({
-            'Society': item.society,
-            'Total Entries': item.entries,
-            'Total Bags': item.totalBags,
-            'Total Quantity (kg)': item.totalQuantity.toFixed(2),
-            'Average Qty Per Entry': (item.totalQuantity / item.entries).toFixed(2),
+        if (filters.districtId) where.districtId = filters.districtId;
+        if (filters.seasonId) where.seasonId = filters.seasonId;
+
+        // Use raw SQL for efficient grouping
+        const results = await this.prisma.$queryRaw<any[]>`
+            SELECT 
+                s.name as society,
+                COUNT(gpe.id) as entries,
+                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe.quantity)::numeric as total_quantity
+            FROM gate_pass_entries gpe
+            LEFT JOIN societies s ON gpe."societyId" = s.id
+            WHERE gpe."riceMillId" = ${filters.riceMillId}
+                AND gpe.date >= ${dateFilter.gte}
+                AND gpe.date <= ${dateFilter.lte}
+                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
+                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
+            GROUP BY s.name
+            ORDER BY s.name ASC
+        `;
+
+        return results.map(row => ({
+            'Society': row.society || 'Unknown',
+            'Total Entries': Number(row.entries),
+            'Total Bags': Number(row.total_bags),
+            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
+            'Average Qty Per Entry': Number(row.entries) > 0
+                ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
+                : '0.00',
         }));
     }
 
-    private async generateSocietyDaywiseReport(entries: any[], riceMillId: string, seasonId?: string) {
-        // Get all societies with targets
+    /**
+     * OPTIMIZED: District report using database aggregation
+     */
+    private async generateDistrictReportOptimized(filters: any, dateFilter: any) {
+        const where: any = {
+            riceMillId: filters.riceMillId,
+            date: dateFilter,
+        };
+
+        if (filters.seasonId) where.seasonId = filters.seasonId;
+
+        // Use raw SQL for efficient grouping with district stats
+        const results = await this.prisma.$queryRaw<any[]>`
+            SELECT 
+                d.name as district,
+                COUNT(gpe.id) as entries,
+                COUNT(DISTINCT gpe."societyId") as societies,
+                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe.quantity)::numeric as total_quantity
+            FROM gate_pass_entries gpe
+            LEFT JOIN districts d ON gpe."districtId" = d.id
+            WHERE gpe."riceMillId" = ${filters.riceMillId}
+                AND gpe.date >= ${dateFilter.gte}
+                AND gpe.date <= ${dateFilter.lte}
+                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
+            GROUP BY d.name
+            ORDER BY d.name ASC
+        `;
+
+        return results.map(row => ({
+            'District': row.district || 'Unknown',
+            'Total Entries': Number(row.entries),
+            'Total Societies': Number(row.societies),
+            'Total Bags': Number(row.total_bags),
+            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
+            'Average Qty Per Entry': Number(row.entries) > 0
+                ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
+                : '0.00',
+        }));
+    }
+
+    /**
+     * OPTIMIZED: Party report using database aggregation
+     */
+    private async generatePartyReportOptimized(filters: any, dateFilter: any) {
+        const where: any = {
+            riceMillId: filters.riceMillId,
+            date: dateFilter,
+        };
+
+        if (filters.societyId) where.societyId = filters.societyId;
+        if (filters.districtId) where.districtId = filters.districtId;
+        if (filters.seasonId) where.seasonId = filters.seasonId;
+
+        const results = await this.prisma.$queryRaw<any[]>`
+            SELECT 
+                gpe."partyName" as party,
+                COUNT(gpe.id) as entries,
+                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe.quantity)::numeric as total_quantity
+            FROM gate_pass_entries gpe
+            WHERE gpe."riceMillId" = ${filters.riceMillId}
+                AND gpe.date >= ${dateFilter.gte}
+                AND gpe.date <= ${dateFilter.lte}
+                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
+                ${filters.societyId ? `AND gpe."societyId" = ${filters.societyId}` : ''}
+                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
+            GROUP BY gpe."partyName"
+            ORDER BY gpe."partyName" ASC
+        `;
+
+        return results.map(row => ({
+            'Party Name': row.party,
+            'Total Entries': Number(row.entries),
+            'Total Bags': Number(row.total_bags),
+            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
+            'Average Qty Per Entry': Number(row.entries) > 0
+                ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
+                : '0.00',
+        }));
+    }
+
+    /**
+     * OPTIMIZED: Vehicle report using database aggregation
+     */
+    private async generateVehicleReportOptimized(filters: any, dateFilter: any) {
+        const where: any = {
+            riceMillId: filters.riceMillId,
+            date: dateFilter,
+        };
+
+        if (filters.societyId) where.societyId = filters.societyId;
+        if (filters.districtId) where.districtId = filters.districtId;
+        if (filters.seasonId) where.seasonId = filters.seasonId;
+
+        const results = await this.prisma.$queryRaw<any[]>`
+            SELECT 
+                gpe."vehicleNo" as vehicle,
+                COUNT(gpe.id) as entries,
+                COUNT(DISTINCT gpe."partyName") as parties,
+                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe.quantity)::numeric as total_quantity
+            FROM gate_pass_entries gpe
+            WHERE gpe."riceMillId" = ${filters.riceMillId}
+                AND gpe.date >= ${dateFilter.gte}
+                AND gpe.date <= ${dateFilter.lte}
+                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
+                ${filters.societyId ? `AND gpe."societyId" = ${filters.societyId}` : ''}
+                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
+            GROUP BY gpe."vehicleNo"
+            ORDER BY gpe."vehicleNo" ASC
+        `;
+
+        return results.map(row => ({
+            'Vehicle No': row.vehicle || 'N/A',
+            'Total Trips': Number(row.entries),
+            'Different Parties': Number(row.parties),
+            'Total Bags': Number(row.total_bags),
+            'Total Quantity (kg)': Number(row.total_quantity).toFixed(2),
+            'Average Qty Per Trip': Number(row.entries) > 0
+                ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
+                : '0.00',
+        }));
+    }
+
+    /**
+     * OPTIMIZED: Summary report using database aggregation
+     */
+    private async generateSummaryReportOptimized(filters: any, dateFilter: any) {
+        const where: any = {
+            riceMillId: filters.riceMillId,
+            date: dateFilter,
+        };
+
+        if (filters.societyId) where.societyId = filters.societyId;
+        if (filters.districtId) where.districtId = filters.districtId;
+        if (filters.seasonId) where.seasonId = filters.seasonId;
+
+        const [result] = await this.prisma.$queryRaw<any[]>`
+            SELECT 
+                COUNT(gpe.id) as total_entries,
+                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe.quantity)::numeric as total_quantity,
+                COUNT(DISTINCT gpe."societyId") as unique_societies,
+                COUNT(DISTINCT gpe."districtId") as unique_districts,
+                COUNT(DISTINCT gpe."partyName") as unique_parties,
+                COUNT(DISTINCT gpe."vehicleNo") as unique_vehicles
+            FROM gate_pass_entries gpe
+            WHERE gpe."riceMillId" = ${filters.riceMillId}
+                AND gpe.date >= ${dateFilter.gte}
+                AND gpe.date <= ${dateFilter.lte}
+                ${filters.seasonId ? `AND gpe."seasonId" = ${filters.seasonId}` : ''}
+                ${filters.societyId ? `AND gpe."societyId" = ${filters.societyId}` : ''}
+                ${filters.districtId ? `AND gpe."districtId" = ${filters.districtId}` : ''}
+        `;
+
+        const totalEntries = Number(result.total_entries);
+        const totalBags = Number(result.total_bags);
+        const totalQuantity = Number(result.total_quantity);
+
+        return [{
+            'Metric': 'Summary',
+            'Total Entries': totalEntries,
+            'Total Bags': totalBags,
+            'Total Quantity (kg)': totalQuantity.toFixed(2),
+            'Average Bags Per Entry': totalEntries > 0 ? (totalBags / totalEntries).toFixed(2) : '0',
+            'Average Quantity Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0',
+            'Unique Societies': Number(result.unique_societies),
+            'Unique Districts': Number(result.unique_districts),
+            'Unique Parties': Number(result.unique_parties),
+            'Unique Vehicles': Number(result.unique_vehicles),
+        }];
+    }
+
+    /**
+     * Society daywise report - Optimized version
+     */
+    private async generateSocietyDaywiseReport(filters: any, dateFilter: any) {
+        const riceMillId = filters.riceMillId;
+        const seasonId = filters.seasonId;
+
+        // Get all societies with targets efficiently
         const societies = await this.prisma.society.findMany({
             where: { riceMillId },
-            include: {
+            select: {
+                id: true,
+                name: true,
                 targets: seasonId ? {
-                    where: { seasonId }
-                } : true,
+                    where: { seasonId },
+                    select: { targetQuantity: true },
+                } : {
+                    select: { targetQuantity: true },
+                },
             },
             orderBy: { name: 'asc' }
         });
 
-        // Get unique dates from entries and sort them
-        const dates = [...new Set(entries.map(e => new Date(e.date).toISOString().split('T')[0]))].sort();
+        // Get all entries within date range
+        const entries = await this.prisma.gatePassEntry.findMany({
+            where: {
+                riceMillId,
+                date: dateFilter,
+                ...(seasonId && { seasonId }),
+            },
+            select: {
+                societyId: true,
+                date: true,
+                quantity: true,
+            },
+            orderBy: { date: 'asc' },
+        });
 
-        // Get date range from filters
-        const reportData = await Promise.all(societies.map(async (society) => {
-            const target = society.targets && society.targets.length > 0 ? society.targets[0].targetQuantity : 0;
+        // Get unique dates and sort them
+        const dates: string[] = [...new Set(entries.map(e => new Date(e.date).toISOString().split('T')[0]))].sort();
 
-            // Calculate cumulative quantity up to the first date
-            const cumulativeQuery = await this.prisma.gatePassEntry.aggregate({
-                where: {
-                    societyId: society.id,
-                    date: {
-                        lt: dates.length > 0 ? new Date(dates[0]) : new Date()
-                    },
-                    ...(seasonId && { seasonId })
+        // Get cumulative quantities before the date range for all societies in one query
+        const cumulativeData = await this.prisma.gatePassEntry.groupBy({
+            by: ['societyId'],
+            where: {
+                riceMillId,
+                date: {
+                    lt: dateFilter.gte
                 },
-                _sum: {
-                    quantity: true
-                }
-            });
+                ...(seasonId && { seasonId }),
+            },
+            _sum: {
+                quantity: true,
+            },
+        });
 
-            const cumulativeQty = Number(cumulativeQuery._sum.quantity) || 0;
+        const cumulativeMap = new Map<string, number>(
+            cumulativeData.map(item => [item.societyId, Number(item._sum.quantity) || 0])
+        );
+
+        // Process each society
+        const reportData = societies.map((society) => {
+            const target = society.targets && society.targets.length > 0
+                ? society.targets[0].targetQuantity
+                : 0;
+
+            const cumulativeQty: number = cumulativeMap.get(society.id) || 0;
 
             // Group entries by date for this society
-            const societyEntries = entries.filter(e => (e.society?.id || e.societyId) === society.id);
+            const societyEntries = entries.filter(e => e.societyId === society.id);
             const dailyData: Record<string, number> = {};
 
             dates.forEach(date => {
@@ -492,116 +855,8 @@ export class GateEntryService {
             result['Less and Excess Paddy Received Against Target'] = variance.toFixed(2);
 
             return result;
-        }));
+        });
 
         return reportData;
     }
-
-    private generateDistrictReport(entries: any[]) {
-        const grouped = entries.reduce((acc: any, entry) => {
-            const district = entry.district?.name || 'Unknown';
-            if (!acc[district]) {
-                acc[district] = {
-                    district,
-                    entries: 0,
-                    totalBags: 0,
-                    totalQuantity: 0,
-                    societies: new Set(),
-                };
-            }
-            acc[district].entries++;
-            acc[district].totalBags += entry.bags;
-            acc[district].totalQuantity += entry.quantity;
-            acc[district].societies.add(entry.society?.name || entry.pacsName);
-            return acc;
-        }, {});
-
-        return Object.values(grouped).map((item: any) => ({
-            'District': item.district,
-            'Total Entries': item.entries,
-            'Total Societies': item.societies.size,
-            'Total Bags': item.totalBags,
-            'Total Quantity (kg)': item.totalQuantity.toFixed(2),
-            'Average Qty Per Entry': (item.totalQuantity / item.entries).toFixed(2),
-        }));
-    }
-
-    private generatePartyReport(entries: any[]) {
-        const grouped = entries.reduce((acc: any, entry) => {
-            const party = entry.partyName;
-            if (!acc[party]) {
-                acc[party] = {
-                    party,
-                    entries: 0,
-                    totalBags: 0,
-                    totalQuantity: 0,
-                };
-            }
-            acc[party].entries++;
-            acc[party].totalBags += entry.bags;
-            acc[party].totalQuantity += entry.quantity;
-            return acc;
-        }, {});
-
-        return Object.values(grouped).map((item: any) => ({
-            'Party Name': item.party,
-            'Total Entries': item.entries,
-            'Total Bags': item.totalBags,
-            'Total Quantity (kg)': item.totalQuantity.toFixed(2),
-            'Average Qty Per Entry': (item.totalQuantity / item.entries).toFixed(2),
-        }));
-    }
-
-    private generateVehicleReport(entries: any[]) {
-        const grouped = entries.reduce((acc: any, entry) => {
-            const vehicle = entry.vehicleNo;
-            if (!acc[vehicle]) {
-                acc[vehicle] = {
-                    vehicle,
-                    entries: 0,
-                    totalBags: 0,
-                    totalQuantity: 0,
-                    parties: new Set(),
-                };
-            }
-            acc[vehicle].entries++;
-            acc[vehicle].totalBags += entry.bags;
-            acc[vehicle].totalQuantity += entry.quantity;
-            acc[vehicle].parties.add(entry.partyName);
-            return acc;
-        }, {});
-
-        return Object.values(grouped).map((item: any) => ({
-            'Vehicle No': item.vehicle,
-            'Total Trips': item.entries,
-            'Different Parties': item.parties.size,
-            'Total Bags': item.totalBags,
-            'Total Quantity (kg)': item.totalQuantity.toFixed(2),
-            'Average Qty Per Trip': (item.totalQuantity / item.entries).toFixed(2),
-        }));
-    }
-
-    private generateSummaryReport(entries: any[]) {
-        const totalEntries = entries.length;
-        const totalBags = entries.reduce((sum, e) => sum + e.bags, 0);
-        const totalQuantity = entries.reduce((sum, e) => sum + e.quantity, 0);
-        const uniqueSocieties = new Set(entries.map(e => e.society?.name || e.pacsName)).size;
-        const uniqueDistricts = new Set(entries.map(e => e.district?.name)).size;
-        const uniqueParties = new Set(entries.map(e => e.partyName)).size;
-        const uniqueVehicles = new Set(entries.map(e => e.vehicleNo)).size;
-
-        return [{
-            'Metric': 'Summary',
-            'Total Entries': totalEntries,
-            'Total Bags': totalBags,
-            'Total Quantity (kg)': totalQuantity.toFixed(2),
-            'Average Bags Per Entry': totalEntries > 0 ? (totalBags / totalEntries).toFixed(2) : '0',
-            'Average Quantity Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0',
-            'Unique Societies': uniqueSocieties,
-            'Unique Districts': uniqueDistricts,
-            'Unique Parties': uniqueParties,
-            'Unique Vehicles': uniqueVehicles,
-        }];
-    }
 }
-

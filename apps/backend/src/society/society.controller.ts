@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } fro
 import { SocietyService } from './society.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { PaginationDto, SortOrder } from '../common/query-optimization.dto';
 
 @Controller('societies')
 @UseGuards(JwtAuthGuard)
@@ -9,11 +10,27 @@ export class SocietyController {
     constructor(private readonly societyService: SocietyService) { }
 
     @Get()
-    async findAll(@CurrentUser() user: any, @Query('districtId') districtId?: string) {
+    async findAll(
+        @CurrentUser() user: any,
+        @Query('districtId') districtId?: string,
+        @Query('search') search?: string,
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
+        @Query('sortBy') sortBy?: string,
+        @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    ) {
+        const pagination: PaginationDto = {
+            page: page ? Number(page) : undefined,
+            limit: limit ? Number(limit) : undefined,
+            sortBy,
+            sortOrder: sortOrder as SortOrder,
+            search,
+        };
+
         if (districtId) {
-            return this.societyService.findByDistrict(districtId, user.riceMillId);
+            return this.societyService.findByDistrict(districtId, user.riceMillId, pagination);
         }
-        return this.societyService.findAll(user.riceMillId);
+        return this.societyService.findAll(user.riceMillId, pagination);
     }
 
     @Get(':id')

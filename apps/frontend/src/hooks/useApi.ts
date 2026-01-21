@@ -10,7 +10,8 @@ import type {
     SeasonResponse,
     CreateSeasonDto,
     SetTargetDto,
-    DashboardStats
+    DashboardStats,
+    PaginatedResponse
 } from '@pacs-track/shared-types';
 
 // Fetcher function for SWR
@@ -21,35 +22,42 @@ const fetcher = (url: string) => apiClient.get(url).then((res) => res.data);
 export function useGateEntries(filters?: {
     societyId?: string;
     districtId?: string;
+    seasonId?: string;
     fromDate?: string;
     toDate?: string;
     search?: string;
     page?: number;
     limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
 }) {
     const params = new URLSearchParams();
     if (filters?.societyId) params.append('societyId', filters.societyId);
     if (filters?.districtId) params.append('districtId', filters.districtId);
+    if (filters?.seasonId) params.append('seasonId', filters.seasonId);
     if (filters?.fromDate) params.append('fromDate', filters.fromDate);
     if (filters?.toDate) params.append('toDate', filters.toDate);
     if (filters?.search) params.append('search', filters.search);
     if (filters?.page) params.append('page', filters.page.toString());
     if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
 
     const queryString = params.toString();
     const url = `/gate-entries${queryString ? `?${queryString}` : ''}`;
 
-    const { data, error, mutate } = useSWR<{
-        data: GateEntryResponse[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    }>(url, fetcher, dynamicDataConfig);
+    const { data, error, mutate } = useSWR<PaginatedResponse<GateEntryResponse>>(
+        url,
+        fetcher,
+        dynamicDataConfig
+    );
 
     return {
         entries: data?.data || [],
         total: data?.total || 0,
+        page: data?.page || 0,
+        limit: data?.limit || 10,
+        totalPages: data?.totalPages || 0,
         isLoading: !error && !data,
         isError: error,
         mutate,
@@ -91,12 +99,37 @@ export async function deleteGateEntry(id: string) {
 
 // ============ Society Hooks ============
 
-export function useSocieties(districtId?: string) {
-    const url = districtId ? `/societies?districtId=${districtId}` : '/societies';
-    const { data, error, mutate } = useSWR<SocietyResponse[]>(url, fetcher, staticDataConfig);
+export function useSocieties(filters?: {
+    districtId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}) {
+    const params = new URLSearchParams();
+    if (filters?.districtId) params.append('districtId', filters.districtId);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+
+    const queryString = params.toString();
+    const url = `/societies${queryString ? `?${queryString}` : ''}`;
+
+    const { data, error, mutate } = useSWR<PaginatedResponse<SocietyResponse>>(
+        url,
+        fetcher,
+        staticDataConfig
+    );
 
     return {
-        societies: data || [],
+        societies: data?.data || [],
+        total: data?.total || 0,
+        page: data?.page || 0,
+        limit: data?.limit || 10,
+        totalPages: data?.totalPages || 0,
         isLoading: !error && !data,
         isError: error,
         mutate,
@@ -147,12 +180,36 @@ export async function deleteSociety(id: string) {
 
 // ============ Party Hooks ============
 
-export function useParties(societyId?: string) {
-    const url = societyId ? `/parties?societyId=${societyId}` : '/parties';
-    const { data, error, mutate } = useSWR<PartyResponse[]>(url, fetcher);
+export function useParties(filters?: {
+    societyId?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+}) {
+    const params = new URLSearchParams();
+    if (filters?.societyId) params.append('societyId', filters.societyId);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+
+    const queryString = params.toString();
+    const url = `/parties${queryString ? `?${queryString}` : ''}`;
+
+    const { data, error, mutate } = useSWR<PaginatedResponse<PartyResponse>>(
+        url,
+        fetcher
+    );
 
     return {
-        parties: data || [],
+        parties: data?.data || [],
+        total: data?.total || 0,
+        page: data?.page || 0,
+        limit: data?.limit || 10,
+        totalPages: data?.totalPages || 0,
         isLoading: !error && !data,
         isError: error,
         mutate,
@@ -200,10 +257,11 @@ export async function deleteParty(id: string) {
 // ============ District Hooks ============
 
 export function useDistricts() {
-    const { data, error, mutate } = useSWR<DistrictResponse[]>('/districts', fetcher, staticDataConfig);
+    const { data, error, mutate } = useSWR<PaginatedResponse<DistrictResponse>>('/districts', fetcher, staticDataConfig);
 
     return {
-        districts: data || [],
+        districts: data?.data || [],
+        total: data?.total || 0,
         isLoading: !error && !data,
         isError: error,
         mutate,

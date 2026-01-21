@@ -43,7 +43,7 @@ export default function Reports() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const { societies } = useSocieties();
+    const { societies } = useSocieties({});
     const { districts } = useDistricts();
     const { seasons } = useSeasons();
     const { activeSeason } = useActiveSeason();

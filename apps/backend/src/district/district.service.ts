@@ -1,16 +1,58 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaginationDto, PaginatedResponse } from '../common/query-optimization.dto';
+import { QueryOptimizationHelper } from '../common/query-optimization.helper';
 
 @Injectable()
 export class DistrictService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findAll(riceMillId?: string) {
+    /**
+     * Find all districts with OPTIMIZED pagination
+     */
+    async findAll(
+        riceMillId?: string,
+        pagination?: PaginationDto
+    ): Promise<PaginatedResponse<any>> {
         const where = riceMillId ? { riceMillId } : {};
-        return this.prisma.district.findMany({
-            where,
-            orderBy: { name: 'asc' },
-        });
+        const page = pagination?.page || 1;
+        const limit = Math.min(pagination?.limit || 50, 100);
+        const skip = QueryOptimizationHelper.calculateSkip(page, limit);
+
+        const orderBy = QueryOptimizationHelper.buildOrderBy(
+            pagination?.sortBy || 'name',
+            pagination?.sortOrder || 'asc'
+        );
+
+        const [districts, total] = await Promise.all([
+            this.prisma.district.findMany({
+                where,
+                select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    state: true,
+                    createdAt: true,
+                    _count: {
+                        select: {
+                            societies: true,
+                            gatePassEntries: true,
+                        },
+                    },
+                },
+                orderBy,
+                skip,
+                take: limit,
+            }),
+            this.prisma.district.count({ where }),
+        ]);
+
+        return QueryOptimizationHelper.buildPaginationMeta(
+            districts,
+            total,
+            page,
+            limit
+        );
     }
 
     async create(data: {

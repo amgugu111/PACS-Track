@@ -1,21 +1,83 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaginationDto, PaginatedResponse } from '../common/query-optimization.dto';
+import { QueryOptimizationHelper } from '../common/query-optimization.helper';
 
 @Injectable()
 export class SocietyService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async findAll(riceMillId?: string) {
-        const where = riceMillId ? { riceMillId } : {};
-        return this.prisma.society.findMany({
-            where,
-            include: {
-                district: true,
-            },
-            orderBy: { name: 'asc' },
-        });
+    /**
+     * Find all societies with OPTIMIZED pagination and filtering
+     */
+    async findAll(
+        riceMillId?: string,
+        pagination?: PaginationDto
+    ): Promise<PaginatedResponse<any>> {
+        const where: any = riceMillId ? { riceMillId } : {};
+
+        // Add search filter if provided
+        if (pagination?.search) {
+            const searchConditions = QueryOptimizationHelper.buildSearchCondition(
+                pagination.search,
+                ['name', 'code', 'contactNo']
+            );
+            if (searchConditions) {
+                where.OR = searchConditions;
+            }
+        }
+
+        const page = pagination?.page || 1;
+        const limit = Math.min(pagination?.limit || 50, 100);
+        const skip = QueryOptimizationHelper.calculateSkip(page, limit);
+
+        const orderBy = QueryOptimizationHelper.buildOrderBy(
+            pagination?.sortBy || 'name',
+            pagination?.sortOrder || 'asc'
+        );
+
+        const [societies, total] = await Promise.all([
+            this.prisma.society.findMany({
+                where,
+                select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    address: true,
+                    contactNo: true,
+                    createdAt: true,
+                    district: {
+                        select: {
+                            id: true,
+                            name: true,
+                            code: true,
+                        },
+                    },
+                    _count: {
+                        select: {
+                            parties: true,
+                            gatePassEntries: true,
+                        },
+                    },
+                },
+                orderBy,
+                skip,
+                take: limit,
+            }),
+            this.prisma.society.count({ where }),
+        ]);
+
+        return QueryOptimizationHelper.buildPaginationMeta(
+            societies,
+            total,
+            page,
+            limit
+        );
     }
 
+    /**
+     * Find one society by ID - OPTIMIZED with selective fields
+     */
     async findOne(id: string, riceMillId?: string) {
         const where: any = { id };
         if (riceMillId) {
@@ -24,9 +86,38 @@ export class SocietyService {
 
         const society = await this.prisma.society.findFirst({
             where,
-            include: {
-                district: true,
-                parties: true,
+            select: {
+                id: true,
+                name: true,
+                code: true,
+                address: true,
+                contactNo: true,
+                createdAt: true,
+                updatedAt: true,
+                district: {
+                    select: {
+                        id: true,
+                        name: true,
+                        code: true,
+                    },
+                },
+                parties: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                    },
+                    orderBy: {
+                        name: 'asc',
+                    },
+                    take: 100, // Limit parties to first 100
+                },
+                _count: {
+                    select: {
+                        parties: true,
+                        gatePassEntries: true,
+                    },
+                },
             },
         });
 
@@ -37,19 +128,69 @@ export class SocietyService {
         return society;
     }
 
-    async findByDistrict(districtId: string, riceMillId?: string) {
+    /**
+     * Find societies by district - OPTIMIZED with pagination
+     */
+    async findByDistrict(
+        districtId: string,
+        riceMillId?: string,
+        pagination?: PaginationDto
+    ): Promise<PaginatedResponse<any>> {
         const where: any = { districtId };
         if (riceMillId) {
             where.riceMillId = riceMillId;
         }
 
-        return this.prisma.society.findMany({
-            where,
-            include: {
-                district: true,
-            },
-            orderBy: { name: 'asc' },
-        });
+        // Add search filter if provided
+        if (pagination?.search) {
+            const searchConditions = QueryOptimizationHelper.buildSearchCondition(
+                pagination.search,
+                ['name', 'code', 'contactNo']
+            );
+            if (searchConditions) {
+                where.OR = searchConditions;
+            }
+        }
+
+        const page = pagination?.page || 1;
+        const limit = Math.min(pagination?.limit || 50, 100);
+        const skip = QueryOptimizationHelper.calculateSkip(page, limit);
+
+        const orderBy = QueryOptimizationHelper.buildOrderBy(
+            pagination?.sortBy || 'name',
+            pagination?.sortOrder || 'asc'
+        );
+
+        const [societies, total] = await Promise.all([
+            this.prisma.society.findMany({
+                where,
+                select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                    address: true,
+                    contactNo: true,
+                    district: {
+                        select: {
+                            id: true,
+                            name: true,
+                            code: true,
+                        },
+                    },
+                },
+                orderBy,
+                skip,
+                take: limit,
+            }),
+            this.prisma.society.count({ where }),
+        ]);
+
+        return QueryOptimizationHelper.buildPaginationMeta(
+            societies,
+            total,
+            page,
+            limit
+        );
     }
 
     async create(data: {

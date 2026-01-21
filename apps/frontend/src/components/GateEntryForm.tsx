@@ -48,8 +48,8 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const [error, setError] = useState('');
 
     // API hooks
-    const { societies, isLoading: loadingSocieties } = useSocieties();
-    const { parties } = useParties(selectedSociety?.id);
+    const { societies, isLoading: loadingSocieties } = useSocieties({});
+    const { parties } = useParties({ societyId: selectedSociety?.id });
     const { activeSeason, isLoading: loadingActiveSeason } = useActiveSeason();
 
     // Calculated field: Qty Per Bag

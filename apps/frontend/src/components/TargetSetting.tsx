@@ -27,7 +27,7 @@ import { useSeasons, useActiveSeason, getSeasonTargets, setSeasonTargets } from 
 export default function TargetSetting() {
     const { seasons, isLoading: loadingSeasons } = useSeasons();
     const { activeSeason } = useActiveSeason();
-    const [selectedSeason, setSelectedSeason] = useState<number | ''>('');
+    const [selectedSeason, setSelectedSeason] = useState<string>('');
     const [targets, setTargets] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -38,13 +38,10 @@ export default function TargetSetting() {
 
     // Preselect active season
     useEffect(() => {
-        if (activeSeason && selectedSeason === '') {
-            const seasonId = parseInt(activeSeason.id, 10);
-            if (!isNaN(seasonId)) {
-                setSelectedSeason(seasonId);
-            }
+        if (activeSeason && !selectedSeason) {
+            setSelectedSeason(activeSeason.id);
         }
-    }, [activeSeason]);
+    }, [activeSeason, selectedSeason]);
 
     useEffect(() => {
         if (selectedSeason) {
@@ -56,7 +53,7 @@ export default function TargetSetting() {
         if (!selectedSeason) return;
         setLoading(true);
         try {
-            const data = await getSeasonTargets(selectedSeason as number);
+            const data = await getSeasonTargets(selectedSeason);
             setTargets(data);
         } catch (error) {
             setSnackbar({
@@ -85,7 +82,7 @@ export default function TargetSetting() {
                 societyId: t.societyId,
                 targetQuantity: t.targetQuantity,
             }));
-            await setSeasonTargets(selectedSeason as number, { targets: targetsData });
+            await setSeasonTargets(selectedSeason, { targets: targetsData });
             setSnackbar({
                 open: true,
                 message: 'Targets saved successfully',
@@ -126,7 +123,7 @@ export default function TargetSetting() {
                     <InputLabel>Select Season</InputLabel>
                     <Select
                         value={selectedSeason}
-                        onChange={(e) => setSelectedSeason(e.target.value as number)}
+                        onChange={(e) => setSelectedSeason(e.target.value as string)}
                         label="Select Season"
                     >
                         <MenuItem value="">-- Select Season --</MenuItem>
