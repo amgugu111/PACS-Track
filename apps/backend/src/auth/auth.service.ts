@@ -242,4 +242,32 @@ export class AuthService {
             },
         });
     }
+
+    async changePassword(userId: string, oldPassword: string, newPassword: string) {
+        // Get user
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        // Verify old password
+        const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update password
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword },
+        });
+
+        return { message: 'Password changed successfully' };
+    }
 }

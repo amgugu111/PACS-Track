@@ -19,6 +19,17 @@ export class VehicleController {
         @Query('sortBy') sortBy?: string,
         @Query('sortOrder') sortOrder?: 'asc' | 'desc',
     ) {
+        // Non-super-admin users without a rice mill should get no vehicles
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return {
+                data: [],
+                total: 0,
+                page: 1,
+                limit: 10,
+                totalPages: 0,
+            };
+        }
+
         const pagination: PaginationDto = {
             page: page ? Number(page) : undefined,
             limit: limit ? Number(limit) : undefined,
@@ -32,6 +43,10 @@ export class VehicleController {
 
     @Get(':id')
     async findOne(@Param('id') id: string, @CurrentUser() user: any) {
+        // Non-super-admin users without a rice mill should get nothing
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return null;
+        }
         return this.vehicleService.findOne(id, user.riceMillId);
     }
 

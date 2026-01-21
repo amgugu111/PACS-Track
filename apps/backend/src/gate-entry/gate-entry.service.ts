@@ -542,7 +542,7 @@ export class GateEntryService {
         const reportData = entries.map((entry, index) => ({
             'S.No': index + 1,
             'Token No': entry.tokenNo,
-            'Date': new Date(entry.date).toLocaleDateString(),
+            'Date': new Date(entry.date).toLocaleDateString('en-GB'),
             'Society': entry.society?.name || entry.pacsName,
             'District': entry.district?.name || '',
             'Party Name': entry.partyName,

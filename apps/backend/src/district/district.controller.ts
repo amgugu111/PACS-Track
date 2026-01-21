@@ -10,6 +10,10 @@ export class DistrictController {
 
     @Get()
     async findAll(@CurrentUser() user: any) {
+        // Non-super-admin users without a rice mill should get no districts
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return [];
+        }
         return this.districtService.findAll(user.riceMillId);
     }
 }

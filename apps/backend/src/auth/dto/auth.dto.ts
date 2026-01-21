@@ -60,3 +60,12 @@ export class CreateRiceMillDto {
     @MinLength(6)
     adminPassword: string;
 }
+
+export class ChangePasswordDto {
+    @IsString()
+    oldPassword: string;
+
+    @IsString()
+    @MinLength(6)
+    newPassword: string;
+}

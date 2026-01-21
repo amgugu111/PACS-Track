@@ -32,6 +32,17 @@ export class GateEntryController {
         @Query('sortBy') sortBy?: string,
         @Query('sortOrder') sortOrder?: string,
     ) {
+        // Non-super-admin users without a rice mill should get no gate entries
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return {
+                data: [],
+                total: 0,
+                page: 1,
+                limit: 10,
+                totalPages: 0,
+            };
+        }
+
         return this.gateEntryService.findAll({
             riceMillId: user.riceMillId,
             societyId,
@@ -100,17 +111,27 @@ export class GateEntryController {
             doc.fontSize(10).font('Helvetica').text(`Period: ${fromDate} to ${toDate}`, { align: 'center' });
             doc.moveDown(2);
 
-            // Calculate column widths
+            // Calculate column widths with smaller width for S.No and padding
+            const columnPadding = 5; // Padding between columns
             const pageWidth = doc.page.width - 60; // margins
-            const columnWidth = pageWidth / headers.length;
+            const totalPadding = (headers.length - 1) * columnPadding; // Total padding space
+            const snoWidth = 40; // Fixed width for S.No column
+            const remainingWidth = pageWidth - snoWidth - totalPadding;
+            const otherColumnsCount = headers.length - 1;
+            const regularColumnWidth = remainingWidth / otherColumnsCount;
+
+            // Create column width map
+            const columnWidths = headers.map(header =>
+                header === 'S.No' ? snoWidth : regularColumnWidth
+            );
 
             // Draw table header
             doc.fontSize(9).font('Helvetica-Bold');
             let xPos = 30;
             const headerY = doc.y;
-            headers.forEach(header => {
-                doc.text(header, xPos, headerY, { width: columnWidth, align: 'left', continued: false });
-                xPos += columnWidth;
+            headers.forEach((header, index) => {
+                doc.text(header, xPos, headerY, { width: columnWidths[index], align: 'center', continued: false });
+                xPos += columnWidths[index] + columnPadding;
             });
             doc.moveDown();
 
@@ -142,17 +163,17 @@ export class GateEntryController {
                 let maxHeight = 0;
 
                 // Calculate max height needed for this row
-                headers.forEach(header => {
+                headers.forEach((header, index) => {
                     const value = row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
-                    const textHeight = doc.heightOfString(value, { width: columnWidth });
+                    const textHeight = doc.heightOfString(value, { width: columnWidths[index] });
                     if (textHeight > maxHeight) maxHeight = textHeight;
                 });
 
                 // Draw all cells at the same startY
-                headers.forEach(header => {
+                headers.forEach((header, index) => {
                     const value = row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
-                    doc.text(value, xPos, startY, { width: columnWidth, align: 'left' });
-                    xPos += columnWidth;
+                    doc.text(value, xPos, startY, { width: columnWidths[index], align: 'center' });
+                    xPos += columnWidths[index] + columnPadding;
                 });
 
                 // Move down by the actual height of the tallest cell

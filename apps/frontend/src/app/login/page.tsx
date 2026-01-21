@@ -25,13 +25,19 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            await login(email, password);
-            console.log('Login successful, waiting for state update...');
+            const userData = await login(email, password);
+            console.log('Login successful, user role:', userData?.role);
             // Wait a bit for state to propagate
             await new Promise(resolve => setTimeout(resolve, 100));
-            console.log('Redirecting to dashboard...');
-            // Use replace instead of push to prevent back button issues
-            router.replace('/dashboard');
+
+            // Redirect based on user role
+            if (userData?.role === 'SUPER_ADMIN') {
+                console.log('Redirecting to admin panel...');
+                router.replace('/admin');
+            } else {
+                console.log('Redirecting to dashboard...');
+                router.replace('/dashboard');
+            }
         } catch (err: any) {
             console.error('Login error:', err);
             setError(err.message || 'Login failed. Please check your credentials.');

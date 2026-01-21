@@ -18,7 +18,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<User>;
     logout: () => void;
     isLoading: boolean;
 }
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
         console.log('AuthContext: State updated with user:', data.user.email);
 
-        // Don't redirect here - let the calling component handle it
+        return data.user; // Return user data for role-based routing
     };
 
     const logout = () => {

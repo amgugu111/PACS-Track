@@ -16,16 +16,28 @@ export class SeasonController {
 
     @Get()
     async findAll(@CurrentUser() user: any) {
+        // Non-super-admin users without a rice mill should get no seasons
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return [];
+        }
         return this.seasonService.findAll(user.riceMillId);
     }
 
     @Get('active')
     async findActive(@CurrentUser() user: any) {
+        // Non-super-admin users without a rice mill should get no active season
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return null;
+        }
         return this.seasonService.findActive(user.riceMillId);
     }
 
     @Get(':id')
     async findOne(@Param('id') id: string, @CurrentUser() user: any) {
+        // Non-super-admin users without a rice mill should get nothing
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return null;
+        }
         return this.seasonService.findOne(id, user.riceMillId);
     }
 
@@ -55,6 +67,10 @@ export class SeasonController {
 
     @Get(':id/targets')
     async getTargets(@Param('id') id: string, @CurrentUser() user: any) {
+        // Non-super-admin users without a rice mill should get no targets
+        if (user.role !== 'SUPER_ADMIN' && !user.riceMillId) {
+            return [];
+        }
         return this.seasonService.getTargets(id, user.riceMillId);
     }
 }
