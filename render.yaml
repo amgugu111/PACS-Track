@@ -29,4 +29,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_URL
-        value: https://your-app.vercel.app
+        value: https://pacs-track-frontend.vercel.app
