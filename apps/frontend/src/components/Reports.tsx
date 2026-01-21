@@ -77,7 +77,7 @@ export default function Reports() {
                 params.append('seasonId', selectedSeason);
             }
 
-            const response = await fetch(`http://localhost:3001/gate-entries/reports/download?${params}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gate-entries/reports/download?${params}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
@@ -92,7 +92,7 @@ export default function Reports() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            const extension = selectedFormat === 'excel' ? 'xlsx' : 'csv';
+            const extension = selectedFormat === 'excel' ? 'xlsx' : selectedFormat === 'pdf' ? 'pdf' : 'csv';
             a.download = `${reportType}_report_${format(fromDate, 'yyyy-MM-dd')}_to_${format(toDate, 'yyyy-MM-dd')}.${extension}`;
             document.body.appendChild(a);
             a.click();
@@ -250,6 +250,7 @@ export default function Reports() {
                                 onChange={(e) => setSelectedFormat(e.target.value)}
                             >
                                 <MenuItem value="excel">Excel (.xlsx)</MenuItem>
+                                <MenuItem value="pdf">PDF (.pdf)</MenuItem>
                                 <MenuItem value="csv">CSV (.csv)</MenuItem>
                             </TextField>
                         </Grid>

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Res } from '@nestjs/common';
 import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
+import * as PDFDocument from 'pdfkit';
 import { GateEntryService } from './gate-entry.service';
 import { CreateGateEntryDto, UpdateGateEntryDto } from './dto/gate-entry.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -70,7 +71,72 @@ export class GateEntryController {
 
         const headers = Object.keys(data[0]);
 
-        if (format === 'excel' || format === 'xlsx') {
+        if (format === 'pdf') {
+            // Generate PDF file
+            const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+            
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${reportType}_report.pdf"`);
+            
+            doc.pipe(res);
+
+            // Add title
+            doc.fontSize(16).font('Helvetica-Bold').text(`${reportType.toUpperCase()} REPORT`, { align: 'center' });
+            doc.moveDown();
+            
+            // Add date range
+            doc.fontSize(10).font('Helvetica').text(`Period: ${fromDate} to ${toDate}`, { align: 'center' });
+            doc.moveDown(2);
+
+            // Calculate column widths
+            const pageWidth = doc.page.width - 60; // margins
+            const columnWidth = pageWidth / headers.length;
+
+            // Draw table header
+            doc.fontSize(9).font('Helvetica-Bold');
+            let xPos = 30;
+            headers.forEach(header => {
+                doc.text(header, xPos, doc.y, { width: columnWidth, align: 'left' });
+                xPos += columnWidth;
+            });
+            doc.moveDown();
+
+            // Draw horizontal line
+            doc.moveTo(30, doc.y).lineTo(doc.page.width - 30, doc.y).stroke();
+            doc.moveDown(0.5);
+
+            // Add data rows
+            doc.font('Helvetica').fontSize(8);
+            data.forEach((row, index) => {
+                xPos = 30;
+                const startY = doc.y;
+                
+                // Check if we need a new page
+                if (doc.y > doc.page.height - 100) {
+                    doc.addPage();
+                }
+
+                headers.forEach(header => {
+                    const value = row[header] ? String(row[header]) : '';
+                    doc.text(value, xPos, startY, { width: columnWidth, align: 'left', height: 20 });
+                    xPos += columnWidth;
+                });
+                
+                doc.moveDown(0.3);
+
+                // Add subtle line between rows
+                if (index < data.length - 1) {
+                    doc.moveTo(30, doc.y).lineTo(doc.page.width - 30, doc.y).stroke('#CCCCCC');
+                    doc.moveDown(0.3);
+                }
+            });
+
+            // Add footer
+            doc.fontSize(8).text(`Generated on: ${new Date().toLocaleString()}`, 30, doc.page.height - 50);
+            doc.text(`Total Records: ${data.length}`, { align: 'right' });
+
+            doc.end();
+        } else if (format === 'excel' || format === 'xlsx') {
             // Generate Excel file
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Report');
