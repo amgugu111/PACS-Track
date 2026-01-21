@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Container, Typography, AppBar, Toolbar, Button, Tabs, Tab } from '@mui/material';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
@@ -14,7 +14,7 @@ import PartyManagement from '@/components/PartyManagement';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function DashboardPage() {
+function DashboardContent() {
     const { user, logout } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -125,5 +125,13 @@ export default function DashboardPage() {
                 {activeTab === 7 && <Reports />}
             </Container>
         </ProtectedRoute>
+    );
+}
+
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <DashboardContent />
+        </Suspense>
     );
 }
