@@ -35,7 +35,7 @@ import {
     Search as SearchIcon,
     Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { useGateEntries, deleteGateEntry, updateGateEntry, useSeasons } from '@/hooks/useApi';
+import { useGateEntries, deleteGateEntry, updateGateEntry, useSeasons, useActiveSeason } from '@/hooks/useApi';
 import type { GateEntryResponse, UpdateGateEntryDto } from '@pacs-track/shared-types';
 import { format } from 'date-fns';
 
@@ -55,7 +55,15 @@ export default function GateEntryList({ onEdit }: GateEntryListProps) {
     const [selectedSeasonId, setSelectedSeasonId] = useState<number | 'all'>('all');
 
     const { seasons } = useSeasons();
+    const { activeSeason } = useActiveSeason();
     const [success, setSuccess] = useState('');
+
+    // Preselect active season
+    useEffect(() => {
+        if (activeSeason && selectedSeasonId === 'all') {
+            setSelectedSeasonId(Number(activeSeason.id));
+        }
+    }, [activeSeason, selectedSeasonId]);
 
     // Debounce search term
     useEffect(() => {

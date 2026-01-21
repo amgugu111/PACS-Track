@@ -22,10 +22,11 @@ import {
     MenuItem,
 } from '@mui/material';
 import { Save } from '@mui/icons-material';
-import { useSeasons, getSeasonTargets, setSeasonTargets } from '@/hooks/useApi';
+import { useSeasons, useActiveSeason, getSeasonTargets, setSeasonTargets } from '@/hooks/useApi';
 
 export default function TargetSetting() {
     const { seasons, isLoading: loadingSeasons } = useSeasons();
+    const { activeSeason } = useActiveSeason();
     const [selectedSeason, setSelectedSeason] = useState<number | ''>('');
     const [targets, setTargets] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -34,6 +35,13 @@ export default function TargetSetting() {
         message: '',
         severity: 'success',
     });
+
+    // Preselect active season
+    useEffect(() => {
+        if (activeSeason && !selectedSeason) {
+            setSelectedSeason(Number(activeSeason.id));
+        }
+    }, [activeSeason, selectedSeason]);
 
     useEffect(() => {
         if (selectedSeason) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Paper,
@@ -28,7 +28,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useSocieties, useDistricts, useSeasons } from '@/hooks/useApi';
+import { useSocieties, useDistricts, useSeasons, useActiveSeason } from '@/hooks/useApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 
@@ -46,7 +46,20 @@ export default function Reports() {
     const { societies } = useSocieties();
     const { districts } = useDistricts();
     const { seasons } = useSeasons();
+    const { activeSeason } = useActiveSeason();
     const { token } = useAuth();
+
+    // Filter districts that have societies
+    const districtsWithSocieties = districts.filter(district =>
+        societies.some(society => society.districtId === district.id)
+    );
+
+    // Preselect active season
+    useEffect(() => {
+        if (activeSeason && selectedSeason === 'all') {
+            setSelectedSeason(String(activeSeason.id));
+        }
+    }, [activeSeason, selectedSeason]);
 
     const handleDownloadReport = async (reportType: string) => {
         if (!fromDate || !toDate) {
@@ -213,7 +226,7 @@ export default function Reports() {
                                 onChange={(e) => setSelectedDistrict(e.target.value)}
                             >
                                 <MenuItem value="all">All Districts</MenuItem>
-                                {districts.map((district) => (
+                                {districtsWithSocieties.map((district) => (
                                     <MenuItem key={district.id} value={district.id}>
                                         {district.name}
                                     </MenuItem>

@@ -24,6 +24,7 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Button,
 } from '@mui/material';
 import {
     TrendingUp,
@@ -31,9 +32,11 @@ import {
     Pending,
     Agriculture,
     LocationOn,
+    Add,
 } from '@mui/icons-material';
 import { useDashboardStats, useActiveSeason, useSeasons } from '@/hooks/useApi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { useRouter } from 'next/navigation';
 
 const COLORS = ['#4caf50', '#ff9800', '#f44336', '#2196f3', '#9c27b0', '#00bcd4'];
 
@@ -43,6 +46,7 @@ export default function AnalyticsDashboard() {
     const [selectedSeasonId, setSelectedSeasonId] = useState<string>('');
     const { stats, isLoading: loadingStats, mutate } = useDashboardStats(selectedSeasonId || activeSeason?.id);
     const [chartView, setChartView] = useState<'society' | 'district'>('society');
+    const router = useRouter();
 
     // Set active season as default when loaded
     useEffect(() => {
@@ -110,6 +114,16 @@ export default function AnalyticsDashboard() {
                 <Alert severity="info" sx={{ mb: 2 }}>
                     No gate entries found for this season yet. Start adding entries to see analytics and statistics.
                 </Alert>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Button
+                        variant="contained"
+                        size="large"
+                        startIcon={<Add />}
+                        onClick={() => router.push('/dashboard/gate-entry')}
+                    >
+                        Add New Entry
+                    </Button>
+                </Box>
             </Box>
         );
     }
