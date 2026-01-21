@@ -176,163 +176,163 @@ export default function AdminDashboard() {
             />
 
             <Container maxWidth="lg" sx={{ py: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Typography variant="h4" fontWeight="bold">
-                    Rice Mills Management
-                </Typography>
-                <Button variant="contained" onClick={() => setOpenDialog(true)}>
-                    Create Rice Mill
-                </Button>
-            </Box>
-
-            {loading ? (
-                <Typography>Loading...</Typography>
-            ) : (
-                <Grid container spacing={3}>
-                    {riceMills.map((mill) => (
-                        <Grid size={{ xs: 12, md: 6 }} key={mill.id}>
-                            <Card>
-                                <CardContent>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-                                        <Typography variant="h6" fontWeight="bold">
-                                            {mill.name}
-                                        </Typography>
-                                        <Chip
-                                            label={mill.isActive ? 'Active' : 'Inactive'}
-                                            color={mill.isActive ? 'success' : 'default'}
-                                            size="small"
-                                        />
-                                    </Box>
-
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                        📧 {mill.email}
-                                    </Typography>
-                                    {mill.phone && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                            📱 {mill.phone}
-                                        </Typography>
-                                    )}
-                                    {mill.licenseNo && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                            🔖 License: {mill.licenseNo}
-                                        </Typography>
-                                    )}
-
-                                    <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                                        <Chip label={`${mill._count.users} Users`} size="small" />
-                                        <Chip label={`${mill._count.gatePassEntries} Entries`} size="small" />
-                                    </Box>
-
-                                    <Box sx={{ mt: 2 }}>
-                                        <Button
-                                            size="small"
-                                            onClick={() => handleToggleStatus(mill.id, mill.isActive)}
-                                        >
-                                            {mill.isActive ? 'Deactivate' : 'Activate'}
-                                        </Button>
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
-            )}
-
-            {/* Create Rice Mill Dialog */}
-            <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
-                <DialogTitle>Create New Rice Mill</DialogTitle>
-                <DialogContent>
-                    <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid size={{ xs: 12 }}>
-                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                                Rice Mill Details
-                            </Typography>
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="Rice Mill Name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="Email"
-                                type="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="Phone"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="License Number"
-                                value={formData.licenseNo}
-                                onChange={(e) => setFormData({ ...formData, licenseNo: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12 }}>
-                            <TextField
-                                fullWidth
-                                label="Address"
-                                multiline
-                                rows={2}
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                            />
-                        </Grid>
-
-                        <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
-                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                                Admin User Details
-                            </Typography>
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="Admin Name"
-                                value={formData.adminName}
-                                onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <TextField
-                                fullWidth
-                                label="Admin Email"
-                                type="email"
-                                value={formData.adminEmail}
-                                onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12 }}>
-                            <TextField
-                                fullWidth
-                                label="Admin Password"
-                                type="password"
-                                value={formData.adminPassword}
-                                onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                            />
-                        </Grid>
-                    </Grid>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-                    <Button onClick={handleCreate} variant="contained">
-                        Create
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+                    <Typography variant="h4" fontWeight="bold">
+                        Rice Mills Management
+                    </Typography>
+                    <Button variant="contained" onClick={() => setOpenDialog(true)}>
+                        Create Rice Mill
                     </Button>
-                </DialogActions>
-            </Dialog>
-        </Container>
-    </>
-);
+                </Box>
+
+                {loading ? (
+                    <Typography>Loading...</Typography>
+                ) : (
+                    <Grid container spacing={3}>
+                        {riceMills.map((mill) => (
+                            <Grid size={{ xs: 12, md: 6 }} key={mill.id}>
+                                <Card>
+                                    <CardContent>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
+                                            <Typography variant="h6" fontWeight="bold">
+                                                {mill.name}
+                                            </Typography>
+                                            <Chip
+                                                label={mill.isActive ? 'Active' : 'Inactive'}
+                                                color={mill.isActive ? 'success' : 'default'}
+                                                size="small"
+                                            />
+                                        </Box>
+
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                            📧 {mill.email}
+                                        </Typography>
+                                        {mill.phone && (
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                📱 {mill.phone}
+                                            </Typography>
+                                        )}
+                                        {mill.licenseNo && (
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                🔖 License: {mill.licenseNo}
+                                            </Typography>
+                                        )}
+
+                                        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                                            <Chip label={`${mill._count.users} Users`} size="small" />
+                                            <Chip label={`${mill._count.gatePassEntries} Entries`} size="small" />
+                                        </Box>
+
+                                        <Box sx={{ mt: 2 }}>
+                                            <Button
+                                                size="small"
+                                                onClick={() => handleToggleStatus(mill.id, mill.isActive)}
+                                            >
+                                                {mill.isActive ? 'Deactivate' : 'Activate'}
+                                            </Button>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </Grid>
+                        ))}
+                    </Grid>
+                )}
+
+                {/* Create Rice Mill Dialog */}
+                <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+                    <DialogTitle>Create New Rice Mill</DialogTitle>
+                    <DialogContent>
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid size={{ xs: 12 }}>
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                                    Rice Mill Details
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Rice Mill Name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Phone"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="License Number"
+                                    value={formData.licenseNo}
+                                    onChange={(e) => setFormData({ ...formData, licenseNo: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Address"
+                                    multiline
+                                    rows={2}
+                                    value={formData.address}
+                                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12 }} sx={{ mt: 2 }}>
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                                    Admin User Details
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Admin Name"
+                                    value={formData.adminName}
+                                    onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Admin Email"
+                                    type="email"
+                                    value={formData.adminEmail}
+                                    onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Admin Password"
+                                    type="password"
+                                    value={formData.adminPassword}
+                                    onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                                />
+                            </Grid>
+                        </Grid>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+                        <Button onClick={handleCreate} variant="contained">
+                            Create
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Container>
+        </>
+    );
 }

@@ -145,44 +145,44 @@ function DashboardContent() {
             />
 
             <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-                <Tab label="Analytics Dashboard" />
-                <Tab label="New Entry" />
-                <Tab label="View All Entries" />
-                <Tab label="Season Management" />
-                <Tab label="Set Targets" />
-                <Tab label="Societies (PACS)" />
-                <Tab label="Parties" />
-                <Tab label="Vehicles" />
-                <Tab label="Reports" />
-            </Tabs>
-        </Box>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                    <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+                        <Tab label="Analytics Dashboard" />
+                        <Tab label="New Entry" />
+                        <Tab label="View All Entries" />
+                        <Tab label="Season Management" />
+                        <Tab label="Set Targets" />
+                        <Tab label="Societies (PACS)" />
+                        <Tab label="Parties" />
+                        <Tab label="Vehicles" />
+                        <Tab label="Reports" />
+                    </Tabs>
+                </Box>
 
-        {activeTab === 0 && <AnalyticsDashboard />}
+                {activeTab === 0 && <AnalyticsDashboard />}
 
-        {activeTab === 1 && (
-            <GateEntryForm
-                onSuccess={() => {
-                    // Switch to list view after successful creation
-                    setActiveTab(2);
-                }}
-            />
-        )}
+                {activeTab === 1 && (
+                    <GateEntryForm
+                        onSuccess={() => {
+                            // Switch to list view after successful creation
+                            setActiveTab(2);
+                        }}
+                    />
+                )}
 
-        {activeTab === 2 && <GateEntryList />}
+                {activeTab === 2 && <GateEntryList />}
 
-        {activeTab === 3 && <SeasonManagement />}
+                {activeTab === 3 && <SeasonManagement />}
 
-        {activeTab === 4 && <TargetSetting />}
+                {activeTab === 4 && <TargetSetting />}
 
-        {activeTab === 5 && <SocietyManagement />}
+                {activeTab === 5 && <SocietyManagement />}
 
-        {activeTab === 6 && <PartyManagement />}
+                {activeTab === 6 && <PartyManagement />}
 
-        {activeTab === 7 && <VehicleManagement />}
+                {activeTab === 7 && <VehicleManagement />}
 
-        {activeTab === 8 && <Reports />}
+                {activeTab === 8 && <Reports />}
             </Container>
         </ProtectedRoute>
     );
