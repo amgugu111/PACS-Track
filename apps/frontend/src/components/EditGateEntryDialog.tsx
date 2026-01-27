@@ -83,7 +83,7 @@ export default function EditGateEntryDialog({ open, entry, onClose, onSuccess }:
                     console.error('Error searching parties:', err);
                     setPartyOptions(parties || []);
                 }
-            }, 300);
+            }, 3000);
 
             return () => clearTimeout(delayDebounceFn);
         } else if (parties) {

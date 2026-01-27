@@ -69,7 +69,7 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                     console.error('Error searching parties:', err);
                     setPartyOptions(parties || []);
                 }
-            }, 300);
+            }, 3000);
 
             return () => clearTimeout(delayDebounceFn);
         } else if (parties) {
