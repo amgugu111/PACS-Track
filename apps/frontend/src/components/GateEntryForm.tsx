@@ -36,7 +36,6 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const [vehicleNo, setVehicleNo] = useState(''); // Vehicle Number
     const [bags, setBags] = useState<number | ''>(''); // Number of Bags
     const [quantity, setQuantity] = useState<number | ''>(''); // Quantity in quintal
-    const [remarks, setRemarks] = useState('');
     const [vehicleNoError, setVehicleNoError] = useState('');
     const [selectedSociety, setSelectedSociety] = useState<SocietyResponse | null>(null);
     const [partyInputValue, setPartyInputValue] = useState('');
@@ -143,7 +142,6 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                 vehicleNo: vehicleNo ? vehicleNo.trim().toUpperCase() : undefined,
                 bags: Number(bags),
                 quantity: Number(quantity),
-                remarks: remarks.trim() || undefined,
                 societyId: selectedSociety.id,
             };
 
@@ -176,7 +174,6 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
         setVehicleNo('');
         setBags('');
         setQuantity('');
-        setRemarks('');
         setSelectedSociety(null);
         setPartyInputValue('');
         setVehicleNoError('');
@@ -455,21 +452,6 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                                         color: 'primary.main',
                                     },
                                 }}
-                            />
-                        </Grid>
-
-                        {/* Remarks */}
-                        <Grid size={{ xs: 12 }}>
-                            <TextField
-                                fullWidth
-                                multiline
-                                rows={3}
-                                label="Remarks"
-                                value={remarks}
-                                onChange={(e) => setRemarks(e.target.value.toUpperCase())}
-                                placeholder="Any additional information..."
-                                helperText="Optional"
-                                inputProps={{ style: { textTransform: 'uppercase' } }}
                             />
                         </Grid>
 

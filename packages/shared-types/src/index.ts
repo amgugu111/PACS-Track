@@ -8,7 +8,6 @@ export interface CreateGateEntryDto {
     vehicleNo?: string; // Vehicle Number (optional for tractor)
     bags: number; // Number of Bags
     quantity: number; // Quantity in Quintals/Kg
-    remarks?: string;
     societyId: string;
     seasonId?: string; // Optional - will use active season if not provided
 }
@@ -21,7 +20,6 @@ export interface UpdateGateEntryDto {
     vehicleNo?: string;
     bags?: number;
     quantity?: number;
-    remarks?: string;
     societyId?: string;
 }
 
@@ -37,7 +35,6 @@ export interface GateEntryResponse {
     bags: number; // Number of Bags
     quantity: number; // Quantity
     qtyPerBag: number; // Calculated field
-    remarks?: string;
     societyId: string;
     partyId: string;
     districtId: string;

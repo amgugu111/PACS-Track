@@ -30,6 +30,7 @@ import type { GateEntryResponse } from '@pacs-track/shared-types';
 import { format } from 'date-fns';
 import DataTable, { type Column } from './shared/DataTable';
 import SearchBar from './shared/SearchBar';
+import EditGateEntryDialog from './EditGateEntryDialog';
 
 interface GateEntryListOptimizedProps {
     onEdit?: (entry: GateEntryResponse) => void;
@@ -49,6 +50,7 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
     // Dialog states
     const [selectedEntry, setSelectedEntry] = useState<GateEntryResponse | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -97,6 +99,11 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
     const handleDeleteClick = (entry: GateEntryResponse) => {
         setSelectedEntry(entry);
         setDeleteDialogOpen(true);
+    };
+
+    const handleEditClick = (entry: GateEntryResponse) => {
+        setSelectedEntry(entry);
+        setEditDialogOpen(true);
     };
 
     const handleDelete = async () => {
@@ -205,7 +212,7 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
                         <IconButton
                             size="small"
                             color="primary"
-                            onClick={() => onEdit?.(row)}
+                            onClick={() => handleEditClick(row)}
                         >
                             <EditIcon fontSize="small" />
                         </IconButton>
@@ -396,6 +403,20 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Edit Dialog */}
+            <EditGateEntryDialog
+                open={editDialogOpen}
+                entry={selectedEntry}
+                onClose={() => {
+                    setEditDialogOpen(false);
+                    setSelectedEntry(null);
+                }}
+                onSuccess={() => {
+                    setSuccess('Gate entry updated successfully');
+                    mutate();
+                }}
+            />
         </Box>
     );
 }

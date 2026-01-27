@@ -40,10 +40,6 @@ export class CreateGateEntryDto {
     quantity: number; // Quantity in kg
 
     @IsString()
-    @IsOptional()
-    remarks?: string;
-
-    @IsString()
     @IsNotEmpty()
     societyId: string;
 
@@ -85,10 +81,6 @@ export class UpdateGateEntryDto {
     @Min(0.01)
     @IsOptional()
     quantity?: number;
-
-    @IsString()
-    @IsOptional()
-    remarks?: string;
 
     @IsString()
     @IsOptional()

@@ -119,7 +119,6 @@ export class GateEntryService {
                 vehicleNo: dto.vehicleNo ? dto.vehicleNo.trim().toUpperCase() : null,
                 bags: dto.bags,
                 quantity: dto.quantity,
-                remarks: dto.remarks,
                 riceMillId: riceMillId,
                 societyId: dto.societyId,
                 partyId: party.id,
@@ -232,8 +231,10 @@ export class GateEntryService {
                     vehicleNo: true,
                     bags: true,
                     quantity: true,
-                    remarks: true,
                     challanNo: true,
+                    societyId: true,
+                    districtId: true,
+                    seasonId: true,
                     society: {
                         select: {
                             id: true,
@@ -307,8 +308,10 @@ export class GateEntryService {
                 vehicleNo: true,
                 bags: true,
                 quantity: true,
-                remarks: true,
                 challanNo: true,
+                societyId: true,
+                districtId: true,
+                seasonId: true,
                 society: {
                     select: {
                         id: true,
@@ -517,7 +520,6 @@ export class GateEntryService {
                 vehicleType: true,
                 bags: true,
                 quantity: true,
-                remarks: true,
                 society: {
                     select: {
                         name: true,
@@ -550,7 +552,6 @@ export class GateEntryService {
             'Bags': entry.bags,
             'Quantity (qtl)': entry.quantity,
             'Qty Per Bag': (entry.quantity / entry.bags).toFixed(2),
-            'Remarks': entry.remarks || '',
         }));
 
         // Add total row
@@ -568,7 +569,6 @@ export class GateEntryService {
             'Bags': totalBags,
             'Quantity (qtl)': totalQuantity,
             'Qty Per Bag': totalBags > 0 ? (totalQuantity / totalBags).toFixed(2) : '0.00',
-            'Remarks': '',
         });
 
         return reportData;
