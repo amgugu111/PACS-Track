@@ -11,8 +11,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         private configService: ConfigService,
     ) {
         const secret = configService.get<string>('JWT_SECRET') || 'your-secret-key-change-in-production';
-        console.log('🔐 JwtStrategy initialized with secret length:', secret.length);
-        console.log('🔐 JwtStrategy secret preview:', secret.substring(0, 20) + '...');
 
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -22,27 +20,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(payload: any) {
-        try {
+        const user = await this.authService.validateUser(payload.sub);
 
-            const user = await this.authService.validateUser(payload.sub);
-
-            if (!user) {
-                console.log('❌ User validation failed - user not found or inactive');
-                throw new UnauthorizedException('User not found or inactive');
-            }
-
-            console.log('✅ User validated:', user.email);
-
-            return {
-                userId: payload.sub,
-                email: payload.email,
-                riceMillId: payload.riceMillId,
-                role: payload.role,
-            };
-        } catch (error) {
-            console.error('❌ JWT validation error:', error.message);
-            console.error('   Error stack:', error.stack);
-            throw error;
+        if (!user) {
+            throw new UnauthorizedException('User not found or inactive');
         }
+
+        return {
+            userId: payload.sub,
+            email: payload.email,
+            riceMillId: payload.riceMillId,
+            role: payload.role,
+        };
     }
 }
