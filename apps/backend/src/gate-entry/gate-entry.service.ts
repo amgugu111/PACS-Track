@@ -96,7 +96,6 @@ export class GateEntryService {
 
         // If party doesn't exist, create new party
         if (!party) {
-            console.log(`Creating new party: ${dto.partyName}`);
             party = await this.prisma.party.create({
                 data: {
                     name: dto.partyName.trim(),
