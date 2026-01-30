@@ -125,7 +125,7 @@ model Vehicle {
 
 model GatePassEntry {
   id           String      @id @default(cuid())
-  serialNumber Int         @default(autoincrement())
+  serialNumber Int
   tokenNo      String
   date         DateTime    @default(now())
   partyName    String

@@ -108,9 +108,18 @@ export class GateEntryService {
             console.log(`Using existing party: ${party.name} (ID: ${party.id})`);
         }
 
+        // Get next serial number for this rice mill
+        const lastEntry = await this.prisma.gatePassEntry.findFirst({
+            where: { riceMillId },
+            orderBy: { serialNumber: 'desc' },
+            select: { serialNumber: true },
+        });
+        const nextSerialNumber = (lastEntry?.serialNumber || 0) + 1;
+
         // Step 6: Create Gate Pass Entry with optimized select
         const gateEntry = await this.prisma.gatePassEntry.create({
             data: {
+                serialNumber: nextSerialNumber,
                 tokenNo: dto.tokenNo,
                 date: dto.date ? new Date(dto.date) : new Date(),
                 partyName: dto.partyName.trim(),
