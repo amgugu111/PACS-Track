@@ -464,6 +464,7 @@ export class GateEntryService {
         societyId?: string;
         districtId?: string;
         seasonId?: string;
+        bagType?: 'gunny' | 'other' | 'all';
     }) {
         // Fetch rice mill name
         const riceMill = await this.prisma.riceMill.findUnique({
@@ -503,8 +504,17 @@ export class GateEntryService {
         }
 
         // Add rice mill name to the report metadata
+        // Determine bag type description for header
+        let bagTypeDescription = '';
+        if (filters.bagType === 'gunny') {
+            bagTypeDescription = ' - Gunny Bags';
+        } else if (filters.bagType === 'other') {
+            bagTypeDescription = ' - Other Bags';
+        }
+
         return {
             riceMillName: riceMill?.name || 'Unknown Rice Mill',
+            bagTypeDescription,
             data: reportData,
         };
     }
@@ -521,6 +531,13 @@ export class GateEntryService {
         if (filters.societyId) where.societyId = filters.societyId;
         if (filters.districtId) where.districtId = filters.districtId;
         if (filters.seasonId) where.seasonId = filters.seasonId;
+
+        // Add bag type filtering
+        if (filters.bagType === 'gunny') {
+            where.gunnyBags = { gt: 0 };
+        } else if (filters.bagType === 'other') {
+            where.otherBags = { gt: 0 };
+        }
 
         return this.prisma.gatePassEntry.findMany({
             where,
@@ -556,26 +573,45 @@ export class GateEntryService {
     private async generateDailyReportOptimized(filters: any, dateFilter: any) {
         const entries = await this.fetchEntriesForReport(filters, dateFilter);
 
-        const reportData = entries.map((entry, index) => ({
-            'S.No': index + 1,
-            'Token No': entry.tokenNo,
-            'Date': new Date(entry.date).toLocaleDateString('en-GB'),
-            'Society': entry.society?.name || entry.pacsName,
-            'District': entry.district?.name || '',
-            'Party Name': entry.partyName,
-            'Vehicle No': entry.vehicleNo || '',
-            'Gunny Bags': entry.gunnyBags,
-            'Other Bags': entry.otherBags,
-            'Total Bags': entry.gunnyBags + entry.otherBags,
-            'Quantity (qtl)': entry.quantity,
-            'Qty Per Bag': ((entry.gunnyBags + entry.otherBags) > 0 ? entry.quantity / (entry.gunnyBags + entry.otherBags) : 0).toFixed(2),
-        }));
+        // Determine which columns to show based on filter
+        const showGunnyBags = !filters.bagType || filters.bagType === 'all' || filters.bagType === 'gunny';
+        const showOtherBags = !filters.bagType || filters.bagType === 'all' || filters.bagType === 'other';
+        const showTotalBags = !filters.bagType || filters.bagType === 'all';
+
+        const reportData = entries.map((entry, index) => {
+            const data: any = {
+                'S.No': index + 1,
+                'Token No': entry.tokenNo,
+                'Date': new Date(entry.date).toLocaleDateString('en-GB'),
+                'Society': entry.society?.name || entry.pacsName,
+                'District': entry.district?.name || '',
+                'Party Name': entry.partyName,
+                'Vehicle No': entry.vehicleNo || '',
+            };
+
+            if (showGunnyBags && filters.bagType !== 'other') {
+                data['Gunny Bags'] = entry.gunnyBags;
+            }
+            if (showOtherBags && filters.bagType !== 'gunny') {
+                data['Other Bags'] = entry.otherBags;
+            }
+            if (showTotalBags) {
+                data['Total Bags'] = entry.gunnyBags + entry.otherBags;
+            }
+
+            data['Quantity (qtl)'] = entry.quantity;
+            data['Qty Per Bag'] = ((entry.gunnyBags + entry.otherBags) > 0 ? entry.quantity / (entry.gunnyBags + entry.otherBags) : 0).toFixed(2);
+
+            return data;
+        });
 
         // Add total row
-        const totalBags = entries.reduce((sum, entry) => sum + entry.gunnyBags + entry.otherBags, 0);
+        const totalGunnyBags = entries.reduce((sum, entry) => sum + entry.gunnyBags, 0);
+        const totalOtherBags = entries.reduce((sum, entry) => sum + entry.otherBags, 0);
+        const totalBags = totalGunnyBags + totalOtherBags;
         const totalQuantity = entries.reduce((sum, entry) => sum + entry.quantity, 0);
 
-        reportData.push({
+        const totalRow: any = {
             'S.No': null as any,
             'Token No': '',
             'Date': '',
@@ -583,12 +619,22 @@ export class GateEntryService {
             'District': '',
             'Party Name': 'TOTAL',
             'Vehicle No': '',
-            'Gunny Bags': null as any,
-            'Other Bags': null as any,
-            'Total Bags': totalBags,
-            'Quantity (qtl)': totalQuantity,
-            'Qty Per Bag': totalBags > 0 ? (totalQuantity / totalBags).toFixed(2) : '0.00',
-        });
+        };
+
+        if (showGunnyBags && filters.bagType !== 'other') {
+            totalRow['Gunny Bags'] = totalGunnyBags;
+        }
+        if (showOtherBags && filters.bagType !== 'gunny') {
+            totalRow['Other Bags'] = totalOtherBags;
+        }
+        if (showTotalBags) {
+            totalRow['Total Bags'] = totalBags;
+        }
+
+        totalRow['Quantity (qtl)'] = totalQuantity;
+        totalRow['Qty Per Bag'] = totalBags > 0 ? (totalQuantity / totalBags).toFixed(2) : '0.00';
+
+        reportData.push(totalRow);
 
         return reportData;
     }
@@ -605,12 +651,19 @@ export class GateEntryService {
         if (filters.districtId) where.districtId = filters.districtId;
         if (filters.seasonId) where.seasonId = filters.seasonId;
 
+        // Determine which bag columns to sum based on filter
+        let gunnyBagSum = 'SUM(gpe."gunnyBags")::int';
+        let otherBagSum = 'SUM(gpe."otherBags")::int';
+        let totalBagSum = 'SUM(gpe."gunnyBags" + gpe."otherBags")::int';
+
         // Build query parts conditionally
         const queryParts = [
             `SELECT 
                 s.name as society,
                 COUNT(gpe.id) as entries,
-                SUM(gpe."gunnyBags" + gpe."otherBags")::int as total_bags,
+                ${gunnyBagSum} as gunny_bags,
+                ${otherBagSum} as other_bags,
+                ${totalBagSum} as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
             LEFT JOIN societies s ON gpe."societyId" = s.id
@@ -634,35 +687,75 @@ export class GateEntryService {
             paramIndex++;
         }
 
+        // Add bag type filtering
+        if (filters.bagType === 'gunny') {
+            queryParts.push(`AND gpe."gunnyBags" > 0`);
+        } else if (filters.bagType === 'other') {
+            queryParts.push(`AND gpe."otherBags" > 0`);
+        }
+
         queryParts.push(`GROUP BY s.name ORDER BY s.name ASC`);
 
         const query = queryParts.join(' ');
         const results = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
 
-        const reportData = results.map((row, index) => ({
-            'S.No': index + 1,
-            'Society': row.society || 'Unknown',
-            'Total Entries': Number(row.entries),
-            'Total Bags': Number(row.total_bags),
-            'Total Quantity (qtl)': Number(row.total_quantity).toFixed(2),
-            'Average Qty Per Entry': Number(row.entries) > 0
+        // Determine which columns to show based on filter
+        const showGunnyBags = !filters.bagType || filters.bagType === 'all' || filters.bagType === 'gunny';
+        const showOtherBags = !filters.bagType || filters.bagType === 'all' || filters.bagType === 'other';
+        const showTotalBags = !filters.bagType || filters.bagType === 'all';
+
+        const reportData = results.map((row, index) => {
+            const data: any = {
+                'S.No': index + 1,
+                'Society': row.society || 'Unknown',
+                'Total Entries': Number(row.entries),
+            };
+
+            if (showGunnyBags && filters.bagType !== 'other') {
+                data['Gunny Bags'] = Number(row.gunny_bags);
+            }
+            if (showOtherBags && filters.bagType !== 'gunny') {
+                data['Other Bags'] = Number(row.other_bags);
+            }
+            if (showTotalBags) {
+                data['Total Bags'] = Number(row.total_bags);
+            }
+
+            data['Total Quantity (qtl)'] = Number(row.total_quantity).toFixed(2);
+            data['Average Qty Per Entry'] = Number(row.entries) > 0
                 ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
-                : '0.00',
-        }));
+                : '0.00';
+
+            return data;
+        });
 
         // Add total row
         const totalEntries = results.reduce((sum, row) => sum + Number(row.entries), 0);
+        const totalGunnyBags = results.reduce((sum, row) => sum + Number(row.gunny_bags), 0);
+        const totalOtherBags = results.reduce((sum, row) => sum + Number(row.other_bags), 0);
         const totalBags = results.reduce((sum, row) => sum + Number(row.total_bags), 0);
         const totalQuantity = results.reduce((sum, row) => sum + Number(row.total_quantity), 0);
 
-        reportData.push({
+        const totalRow: any = {
             'S.No': null as any,
             'Society': 'TOTAL',
             'Total Entries': totalEntries,
-            'Total Bags': totalBags,
-            'Total Quantity (qtl)': totalQuantity.toFixed(2),
-            'Average Qty Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0.00',
-        });
+        };
+
+        if (showGunnyBags && filters.bagType !== 'other') {
+            totalRow['Gunny Bags'] = totalGunnyBags;
+        }
+        if (showOtherBags && filters.bagType !== 'gunny') {
+            totalRow['Other Bags'] = totalOtherBags;
+        }
+        if (showTotalBags) {
+            totalRow['Total Bags'] = totalBags;
+        }
+
+        totalRow['Total Quantity (qtl)'] = totalQuantity.toFixed(2);
+        totalRow['Average Qty Per Entry'] = totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0.00';
+
+        reportData.push(totalRow);
 
         return reportData;
     }
@@ -684,6 +777,8 @@ export class GateEntryService {
                 d.name as district,
                 COUNT(gpe.id) as entries,
                 COUNT(DISTINCT gpe."societyId") as societies,
+                SUM(gpe."gunnyBags")::int as gunny_bags,
+                SUM(gpe."otherBags")::int as other_bags,
                 SUM(gpe."gunnyBags" + gpe."otherBags")::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
@@ -702,38 +797,78 @@ export class GateEntryService {
             paramIndex++;
         }
 
+        // Add bag type filtering
+        if (filters.bagType === 'gunny') {
+            queryParts.push(`AND gpe."gunnyBags" > 0`);
+        } else if (filters.bagType === 'other') {
+            queryParts.push(`AND gpe."otherBags" > 0`);
+        }
+
         queryParts.push(`GROUP BY d.name ORDER BY d.name ASC`);
 
         const query = queryParts.join(' ');
         const results = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
 
-        const reportData = results.map((row, index) => ({
-            'S.No': index + 1,
-            'District': row.district || 'Unknown',
-            'Total Entries': Number(row.entries),
-            'Total Societies': Number(row.societies),
-            'Total Bags': Number(row.total_bags),
-            'Total Quantity (qtl)': Number(row.total_quantity).toFixed(2),
-            'Average Qty Per Entry': Number(row.entries) > 0
+        // Determine which columns to show
+        const showGunnyBags = !filters.bagType || filters.bagType === 'all' || filters.bagType === 'gunny';
+        const showOtherBags = !filters.bagType || filters.bagType === 'all' || filters.bagType === 'other';
+        const showTotalBags = !filters.bagType || filters.bagType === 'all';
+
+        const reportData = results.map((row, index) => {
+            const data: any = {
+                'S.No': index + 1,
+                'District': row.district || 'Unknown',
+                'Total Entries': Number(row.entries),
+                'Total Societies': Number(row.societies),
+            };
+
+            if (showGunnyBags && filters.bagType !== 'other') {
+                data['Gunny Bags'] = Number(row.gunny_bags);
+            }
+            if (showOtherBags && filters.bagType !== 'gunny') {
+                data['Other Bags'] = Number(row.other_bags);
+            }
+            if (showTotalBags) {
+                data['Total Bags'] = Number(row.total_bags);
+            }
+
+            data['Total Quantity (qtl)'] = Number(row.total_quantity).toFixed(2);
+            data['Average Qty Per Entry'] = Number(row.entries) > 0
                 ? (Number(row.total_quantity) / Number(row.entries)).toFixed(2)
-                : '0.00',
-        }));
+                : '0.00';
+
+            return data;
+        });
 
         // Add total row
         const totalEntries = results.reduce((sum, row) => sum + Number(row.entries), 0);
         const totalSocieties = results.reduce((sum, row) => sum + Number(row.societies), 0);
+        const totalGunnyBags = results.reduce((sum, row) => sum + Number(row.gunny_bags), 0);
+        const totalOtherBags = results.reduce((sum, row) => sum + Number(row.other_bags), 0);
         const totalBags = results.reduce((sum, row) => sum + Number(row.total_bags), 0);
         const totalQuantity = results.reduce((sum, row) => sum + Number(row.total_quantity), 0);
 
-        reportData.push({
+        const totalRow: any = {
             'S.No': null as any,
             'District': 'TOTAL',
             'Total Entries': totalEntries,
             'Total Societies': totalSocieties,
-            'Total Bags': totalBags,
-            'Total Quantity (qtl)': totalQuantity.toFixed(2),
-            'Average Qty Per Entry': totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0.00',
-        });
+        };
+
+        if (showGunnyBags && filters.bagType !== 'other') {
+            totalRow['Gunny Bags'] = totalGunnyBags;
+        }
+        if (showOtherBags && filters.bagType !== 'gunny') {
+            totalRow['Other Bags'] = totalOtherBags;
+        }
+        if (showTotalBags) {
+            totalRow['Total Bags'] = totalBags;
+        }
+
+        totalRow['Total Quantity (qtl)'] = totalQuantity.toFixed(2);
+        totalRow['Average Qty Per Entry'] = totalEntries > 0 ? (totalQuantity / totalEntries).toFixed(2) : '0.00';
+
+        reportData.push(totalRow);
 
         return reportData;
     }

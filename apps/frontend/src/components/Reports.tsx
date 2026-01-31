@@ -38,6 +38,7 @@ export default function Reports() {
     const [selectedSociety, setSelectedSociety] = useState<string>('all');
     const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
     const [selectedSeason, setSelectedSeason] = useState<string>('all');
+    const [selectedBagType, setSelectedBagType] = useState<string>('all');
     const [selectedFormat, setSelectedFormat] = useState<string>('excel');
     const [loadingReport, setLoadingReport] = useState<string | null>(null);
     const [error, setError] = useState('');
@@ -88,6 +89,10 @@ export default function Reports() {
 
             if (selectedSeason !== 'all') {
                 params.append('seasonId', selectedSeason);
+            }
+
+            if (selectedBagType !== 'all') {
+                params.append('bagType', selectedBagType);
             }
 
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gate-entries/reports/download?${params}`, {
@@ -147,6 +152,10 @@ export default function Reports() {
 
             if (selectedSeason !== 'all') {
                 params.append('seasonId', selectedSeason);
+            }
+
+            if (selectedBagType !== 'all') {
+                params.append('bagType', selectedBagType);
             }
 
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/gate-entries/reports/download?${params}`, {
@@ -305,6 +314,22 @@ export default function Reports() {
                                         {season.isActive && ' (Active)'}
                                     </MenuItem>
                                 ))}
+                            </TextField>
+                        </Grid>
+
+                        {/* Bag Type Filter */}
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <TextField
+                                select
+                                fullWidth
+                                label="Bag Type"
+                                value={selectedBagType}
+                                onChange={(e) => setSelectedBagType(e.target.value)}
+                                helperText="Filter reports by bag type"
+                            >
+                                <MenuItem value="all">All Bags (Gunny + Other)</MenuItem>
+                                <MenuItem value="gunny">Gunny Bags Only</MenuItem>
+                                <MenuItem value="other">Other Bags Only</MenuItem>
                             </TextField>
                         </Grid>
 

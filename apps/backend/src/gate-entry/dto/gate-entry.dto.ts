@@ -119,5 +119,9 @@ export class GateEntryFilterDto extends SearchFilterDto {
     @IsEnum(VehicleType)
     @IsOptional()
     vehicleType?: VehicleType;
+
+    @IsString()
+    @IsOptional()
+    bagType?: 'gunny' | 'other' | 'all';
 }
 

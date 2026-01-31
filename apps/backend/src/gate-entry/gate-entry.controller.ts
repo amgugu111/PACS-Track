@@ -68,6 +68,7 @@ export class GateEntryController {
         @Query('societyId') societyId?: string,
         @Query('districtId') districtId?: string,
         @Query('seasonId') seasonId?: string,
+        @Query('bagType') bagType?: 'gunny' | 'other' | 'all',
         @Res() res?: Response,
     ) {
         const report = await this.gateEntryService.generateReport({
@@ -78,10 +79,12 @@ export class GateEntryController {
             societyId,
             districtId,
             seasonId,
+            bagType,
         });
 
         const data = report.data;
         const riceMillName = report.riceMillName;
+        const bagTypeDescription = report.bagTypeDescription || '';
 
         if (data.length === 0) {
             res.status(404).send('No data found for the selected filters');
@@ -104,7 +107,7 @@ export class GateEntryController {
             doc.moveDown(0.5);
 
             // Add title
-            doc.fontSize(16).font('Helvetica-Bold').text(`${reportType.toUpperCase()} REPORT`, { align: 'center' });
+            doc.fontSize(16).font('Helvetica-Bold').text(`${reportType.toUpperCase()} REPORT${bagTypeDescription}`, { align: 'center' });
             doc.moveDown();
 
             // Add date range
@@ -210,7 +213,7 @@ export class GateEntryController {
 
             // Add report title
             worksheet.mergeCells('A2', `${String.fromCharCode(64 + headers.length)}2`);
-            worksheet.getCell('A2').value = `${reportType.toUpperCase()} REPORT`;
+            worksheet.getCell('A2').value = `${reportType.toUpperCase()} REPORT${bagTypeDescription}`;
             worksheet.getCell('A2').font = { bold: true, size: 14 };
             worksheet.getCell('A2').alignment = { horizontal: 'center' };
 
@@ -279,7 +282,7 @@ export class GateEntryController {
             // Generate CSV file
             const csvRows = [
                 `"${riceMillName}"`,
-                `"${reportType.toUpperCase()} REPORT"`,
+                `"${reportType.toUpperCase()} REPORT${bagTypeDescription}"`,
                 `"Period: ${fromDate} to ${toDate}"`,
                 '',
                 headers.join(','),
