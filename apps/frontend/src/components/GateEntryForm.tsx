@@ -34,7 +34,8 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const [partyName, setPartyName] = useState(''); // Name of the Party
     const [vehicleType, setVehicleType] = useState<'TRACTOR' | 'TRUCK' | 'TATA_ACE'>('TRUCK');
     const [vehicleNo, setVehicleNo] = useState(''); // Vehicle Number
-    const [bags, setBags] = useState<number | ''>(''); // Number of Bags
+    const [gunnyBags, setGunnyBags] = useState<number | ''>(''); // Number of Gunny Bags
+    const [otherBags, setOtherBags] = useState<number | ''>(''); // Number of Other Bags
     const [quantity, setQuantity] = useState<number | ''>(''); // Quantity in quintal
     const [vehicleNoError, setVehicleNoError] = useState('');
     const [selectedSociety, setSelectedSociety] = useState<SocietyResponse | null>(null);
@@ -53,7 +54,8 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
     const { vehicles } = useVehicles({ limit: 1000 }); // Get all managed vehicles
 
     // Calculated field: Qty Per Bag
-    const qtyPerBag = bags && quantity ? (Number(quantity) / Number(bags)).toFixed(2) : '0.00';
+    const totalBags = (Number(gunnyBags) || 0) + (Number(otherBags) || 0);
+    const qtyPerBag = totalBags && quantity ? (Number(quantity) / totalBags).toFixed(2) : '0.00';
 
     // Auto-fill district when society is selected
     const selectedDistrict = selectedSociety?.district?.name || '';
@@ -122,8 +124,9 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
             setError('Party name is required');
             return;
         }
-        if (!bags || Number(bags) <= 0 || !Number.isInteger(Number(bags))) {
-            setError('Number of bags must be a whole number and at least 1');
+        const totalBagsValue = (Number(gunnyBags) || 0) + (Number(otherBags) || 0);
+        if (totalBagsValue <= 0) {
+            setError('Total number of bags must be at least 1');
             return;
         }
         if (!quantity || Number(quantity) <= 0) {
@@ -140,7 +143,8 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                 partyName: partyName.trim(),
                 vehicleType: vehicleType,
                 vehicleNo: vehicleNo ? vehicleNo.trim().toUpperCase() : undefined,
-                bags: Number(bags),
+                gunnyBags: Number(gunnyBags) || 0,
+                otherBags: Number(otherBags) || 0,
                 quantity: Number(quantity),
                 societyId: selectedSociety.id,
             };
@@ -172,7 +176,8 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
         setPartyName('');
         setVehicleType('TRUCK');
         setVehicleNo('');
-        setBags('');
+        setGunnyBags('');
+        setOtherBags('');
         setQuantity('');
         setSelectedSociety(null);
         setPartyInputValue('');
@@ -405,20 +410,54 @@ export default function GateEntryForm({ onSuccess, onError }: GateEntryFormProps
                             />
                         </Grid>
 
-                        {/* Bags */}
-                        <Grid size={{ xs: 12, md: 6 }}>
+                        {/* Gunny Bags */}
+                        <Grid size={{ xs: 12, md: 4 }}>
                             <TextField
                                 fullWidth
-                                required
                                 type="number"
-                                label="Bag"
-                                value={bags}
+                                label="Gunny Bags"
+                                value={gunnyBags}
                                 onChange={(e) => {
                                     const value = e.target.value ? parseInt(e.target.value) : '';
-                                    setBags(value);
+                                    setGunnyBags(value);
                                 }}
-                                inputProps={{ min: 1, step: 1 }}
-                                helperText="Number of bags (whole number)"
+                                inputProps={{ min: 0, step: 1 }}
+                                helperText="Number of gunny bags"
+                            />
+                        </Grid>
+
+                        {/* Other Bags */}
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <TextField
+                                fullWidth
+                                type="number"
+                                label="Other Bags"
+                                value={otherBags}
+                                onChange={(e) => {
+                                    const value = e.target.value ? parseInt(e.target.value) : '';
+                                    setOtherBags(value);
+                                }}
+                                inputProps={{ min: 0, step: 1 }}
+                                helperText="Number of other bags"
+                            />
+                        </Grid>
+
+                        {/* Total Bags (Read-only) */}
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <TextField
+                                fullWidth
+                                label="Total Bags"
+                                value={totalBags}
+                                InputProps={{
+                                    readOnly: true,
+                                }}
+                                helperText="Auto-calculated total"
+                                sx={{
+                                    '& .MuiInputBase-input': {
+                                        fontWeight: 'bold',
+                                        color: 'primary.main',
+                                    },
+                                }}
                             />
                         </Grid>
 

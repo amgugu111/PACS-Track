@@ -33,7 +33,8 @@ export default function EditGateEntryDialog({ open, entry, onClose, onSuccess }:
     const [partyName, setPartyName] = useState('');
     const [vehicleType, setVehicleType] = useState<'TRACTOR' | 'TRUCK' | 'TATA_ACE'>('TRUCK');
     const [vehicleNo, setVehicleNo] = useState('');
-    const [bags, setBags] = useState<number | ''>('');
+    const [gunnyBags, setGunnyBags] = useState<number | ''>('');
+    const [otherBags, setOtherBags] = useState<number | ''>('');
     const [quantity, setQuantity] = useState<number | ''>('');
     const [selectedSociety, setSelectedSociety] = useState<SocietyResponse | null>(null);
     const [partyInputValue, setPartyInputValue] = useState('');
@@ -55,7 +56,8 @@ export default function EditGateEntryDialog({ open, entry, onClose, onSuccess }:
             setPartyName(entry.partyName);
             setVehicleType(entry.vehicleType as 'TRACTOR' | 'TRUCK' | 'TATA_ACE');
             setVehicleNo(entry.vehicleNo || '');
-            setBags(entry.bags);
+            setGunnyBags(entry.gunnyBags || 0);
+            setOtherBags(entry.otherBags || 0);
             setQuantity(entry.quantity);
 
             // Find and set the society - prefer the society from entry if available with district
@@ -104,7 +106,8 @@ export default function EditGateEntryDialog({ open, entry, onClose, onSuccess }:
         setVehicleNoError('');
 
         // Validation
-        if (!tokenNo.trim() || !partyName.trim() || !bags || !quantity || !selectedSociety) {
+        const totalBagsValue = (Number(gunnyBags) || 0) + (Number(otherBags) || 0);
+        if (!tokenNo.trim() || !partyName.trim() || totalBagsValue <= 0 || !quantity || !selectedSociety) {
             setError('Please fill in all required fields');
             return;
         }
@@ -126,7 +129,8 @@ export default function EditGateEntryDialog({ open, entry, onClose, onSuccess }:
                 partyName: partyName.trim(),
                 vehicleType: vehicleType,
                 vehicleNo: vehicleNo ? vehicleNo.trim().toUpperCase() : undefined,
-                bags: Number(bags),
+                gunnyBags: Number(gunnyBags) || 0,
+                otherBags: Number(otherBags) || 0,
                 quantity: Number(quantity),
                 societyId: selectedSociety.id,
             };
@@ -150,7 +154,8 @@ export default function EditGateEntryDialog({ open, entry, onClose, onSuccess }:
         }
     };
 
-    const qtyPerBag = bags && quantity ? (Number(quantity) / Number(bags)).toFixed(2) : '0.00';
+    const totalBags = (Number(gunnyBags) || 0) + (Number(otherBags) || 0);
+    const qtyPerBag = totalBags && quantity ? (Number(quantity) / totalBags).toFixed(2) : '0.00';
     const selectedDistrict = selectedSociety?.district?.name || '';
 
     // Check if vehicle is managed
@@ -301,16 +306,45 @@ export default function EditGateEntryDialog({ open, entry, onClose, onSuccess }:
                                 />
                             </Grid>
 
-                            {/* Number of Bags */}
-                            <Grid size={{ xs: 12, md: 6 }}>
+                            {/* Gunny Bags */}
+                            <Grid size={{ xs: 12, md: 4 }}>
                                 <TextField
                                     fullWidth
-                                    required
                                     type="number"
-                                    label="Number of Bags"
-                                    value={bags}
-                                    onChange={(e) => setBags(e.target.value === '' ? '' : Number(e.target.value))}
-                                    inputProps={{ min: 1, step: 1 }}
+                                    label="Gunny Bags"
+                                    value={gunnyBags}
+                                    onChange={(e) => setGunnyBags(e.target.value === '' ? '' : Number(e.target.value))}
+                                    inputProps={{ min: 0, step: 1 }}
+                                />
+                            </Grid>
+
+                            {/* Other Bags */}
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <TextField
+                                    fullWidth
+                                    type="number"
+                                    label="Other Bags"
+                                    value={otherBags}
+                                    onChange={(e) => setOtherBags(e.target.value === '' ? '' : Number(e.target.value))}
+                                    inputProps={{ min: 0, step: 1 }}
+                                />
+                            </Grid>
+
+                            {/* Total Bags */}
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Total Bags"
+                                    value={totalBags}
+                                    InputProps={{
+                                        readOnly: true,
+                                    }}
+                                    sx={{
+                                        '& .MuiInputBase-input': {
+                                            fontWeight: 'bold',
+                                            color: 'primary.main',
+                                        },
+                                    }}
                                 />
                             </Grid>
 

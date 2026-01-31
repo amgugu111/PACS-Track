@@ -31,9 +31,13 @@ export class CreateGateEntryDto {
     })
     vehicleNo?: string; // Vehicle Number (optional for tractor)
 
-    @IsInt({ message: 'Number of bags must be a whole number' })
-    @Min(1, { message: 'Number of bags must be at least 1' })
-    bags: number;
+    @IsInt({ message: 'Number of gunny bags must be a whole number' })
+    @Min(0, { message: 'Number of gunny bags must be at least 0' })
+    gunnyBags: number;
+
+    @IsInt({ message: 'Number of other bags must be a whole number' })
+    @Min(0, { message: 'Number of other bags must be at least 0' })
+    otherBags: number;
 
     @IsNumber({}, { message: 'Quantity must be a valid number' })
     @Min(0.01, { message: 'Quantity must be greater than 0 kg' })
@@ -72,10 +76,15 @@ export class UpdateGateEntryDto {
     })
     vehicleNo?: string;
 
-    @IsInt({ message: 'Number of bags must be a whole number' })
-    @Min(1)
+    @IsInt({ message: 'Number of gunny bags must be a whole number' })
+    @Min(0)
     @IsOptional()
-    bags?: number;
+    gunnyBags?: number;
+
+    @IsInt({ message: 'Number of other bags must be a whole number' })
+    @Min(0)
+    @IsOptional()
+    otherBags?: number;
 
     @IsNumber({}, { message: 'Quantity must be a valid number' })
     @Min(0.01)

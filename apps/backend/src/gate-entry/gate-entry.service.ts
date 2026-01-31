@@ -78,8 +78,9 @@ export class GateEntryService {
             throw new BadRequestException('Quantity must be greater than 0');
         }
 
-        if (dto.bags <= 0) {
-            throw new BadRequestException('Number of bags must be greater than 0');
+        const totalBags = dto.gunnyBags + dto.otherBags;
+        if (totalBags <= 0) {
+            throw new BadRequestException('Total number of bags must be greater than 0');
         }
 
         // Smart Party Upsert - Check if party exists by name (case-insensitive)
@@ -125,7 +126,8 @@ export class GateEntryService {
                 pacsName: society.name, // Denormalized for search
                 vehicleType: dto.vehicleType,
                 vehicleNo: dto.vehicleNo ? dto.vehicleNo.trim().toUpperCase() : null,
-                bags: dto.bags,
+                gunnyBags: dto.gunnyBags,
+                otherBags: dto.otherBags,
                 quantity: dto.quantity,
                 riceMillId: riceMillId,
                 societyId: dto.societyId,
@@ -440,9 +442,11 @@ export class GateEntryService {
      * Helper: Add calculated fields to gate entry
      */
     private enrichWithCalculations(entry: any) {
+        const totalBags = (entry.gunnyBags || 0) + (entry.otherBags || 0);
         return {
             ...entry,
-            qtyPerBag: entry.bags > 0 ? entry.quantity / entry.bags : 0,
+            totalBags,
+            qtyPerBag: totalBags > 0 ? entry.quantity / totalBags : 0,
         };
     }
 
@@ -557,13 +561,15 @@ export class GateEntryService {
             'District': entry.district?.name || '',
             'Party Name': entry.partyName,
             'Vehicle No': entry.vehicleNo || '',
-            'Bags': entry.bags,
+            'Gunny Bags': entry.gunnyBags,
+            'Other Bags': entry.otherBags,
+            'Total Bags': entry.gunnyBags + entry.otherBags,
             'Quantity (qtl)': entry.quantity,
-            'Qty Per Bag': (entry.quantity / entry.bags).toFixed(2),
+            'Qty Per Bag': ((entry.gunnyBags + entry.otherBags) > 0 ? entry.quantity / (entry.gunnyBags + entry.otherBags) : 0).toFixed(2),
         }));
 
         // Add total row
-        const totalBags = entries.reduce((sum, entry) => sum + entry.bags, 0);
+        const totalBags = entries.reduce((sum, entry) => sum + entry.gunnyBags + entry.otherBags, 0);
         const totalQuantity = entries.reduce((sum, entry) => sum + entry.quantity, 0);
 
         reportData.push({
@@ -599,7 +605,7 @@ export class GateEntryService {
             `SELECT 
                 s.name as society,
                 COUNT(gpe.id) as entries,
-                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe."gunnyBags" + gpe."otherBags")::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
             LEFT JOIN societies s ON gpe."societyId" = s.id
@@ -673,7 +679,7 @@ export class GateEntryService {
                 d.name as district,
                 COUNT(gpe.id) as entries,
                 COUNT(DISTINCT gpe."societyId") as societies,
-                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe."gunnyBags" + gpe."otherBags")::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
             LEFT JOIN districts d ON gpe."districtId" = d.id
@@ -745,7 +751,7 @@ export class GateEntryService {
             `SELECT 
                 gpe."partyName" as party,
                 COUNT(gpe.id) as entries,
-                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe."gunnyBags" + gpe."otherBags")::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity
             FROM gate_pass_entries gpe
             WHERE gpe."riceMillId" = $1
@@ -824,7 +830,7 @@ export class GateEntryService {
         const queryParts = [
             `SELECT 
                 COUNT(gpe.id) as total_entries,
-                SUM(gpe.bags)::int as total_bags,
+                SUM(gpe."gunnyBags" + gpe."otherBags")::int as total_bags,
                 SUM(gpe.quantity)::numeric as total_quantity,
                 COUNT(DISTINCT gpe."societyId") as unique_societies,
                 COUNT(DISTINCT gpe."districtId") as unique_districts,

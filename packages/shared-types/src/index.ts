@@ -6,7 +6,8 @@ export interface CreateGateEntryDto {
     partyName: string; // Name of the Party
     vehicleType: 'TRACTOR' | 'TRUCK' | 'TATA_ACE'; // Type of Vehicle
     vehicleNo?: string; // Vehicle Number (optional for tractor)
-    bags: number; // Number of Bags
+    gunnyBags: number; // Number of Gunny Bags
+    otherBags: number; // Number of Other Bags
     quantity: number; // Quantity in Quintals/Kg
     societyId: string;
     seasonId?: string; // Optional - will use active season if not provided
@@ -18,7 +19,8 @@ export interface UpdateGateEntryDto {
     partyName?: string;
     vehicleType?: 'TRACTOR' | 'TRUCK' | 'TATA_ACE';
     vehicleNo?: string;
-    bags?: number;
+    gunnyBags?: number;
+    otherBags?: number;
     quantity?: number;
     societyId?: string;
 }
@@ -32,9 +34,11 @@ export interface GateEntryResponse {
     pacsName: string; // PACS/PPC Name
     vehicleType: string; // Type of Vehicle
     vehicleNo?: string; // Vehicle Number (optional for tractor)
-    bags: number; // Number of Bags
+    gunnyBags: number; // Number of Gunny Bags
+    otherBags: number; // Number of Other Bags
+    totalBags?: number; // Calculated field
     quantity: number; // Quantity
-    qtyPerBag: number; // Calculated field
+    qtyPerBag?: number; // Calculated field
     societyId: string;
     partyId: string;
     districtId: string;

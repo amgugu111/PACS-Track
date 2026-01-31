@@ -132,7 +132,8 @@ model GatePassEntry {
   pacsName     String
   vehicleType  VehicleType @default(TRUCK)
   vehicleNo    String?
-  bags         Int
+  gunnyBags    Int         @default(0)
+  otherBags    Int         @default(0)
   quantity     Float
   remarks      String?
   challanNo    String?

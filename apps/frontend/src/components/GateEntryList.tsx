@@ -187,11 +187,25 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
             minWidth: 120,
         },
         {
-            id: 'bags',
-            label: 'Bags',
+            id: 'gunnyBags',
+            label: 'Gunny Bags',
             sortable: true,
             align: 'right',
-            minWidth: 80,
+            minWidth: 100,
+        },
+        {
+            id: 'otherBags',
+            label: 'Other Bags',
+            sortable: true,
+            align: 'right',
+            minWidth: 100,
+        },
+        {
+            id: 'totalBags',
+            label: 'Total Bags',
+            sortable: false,
+            align: 'right',
+            minWidth: 100,
         },
         {
             id: 'quantity',

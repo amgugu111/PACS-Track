@@ -344,7 +344,9 @@ export default function AnalyticsDashboard() {
                                 <TableCell><strong>Society</strong></TableCell>
                                 <TableCell><strong>District</strong></TableCell>
                                 <TableCell align="right"><strong>Quantity (quintal)</strong></TableCell>
-                                <TableCell align="right"><strong>Bags</strong></TableCell>
+                                <TableCell align="right"><strong>Gunny Bags</strong></TableCell>
+                                <TableCell align="right"><strong>Other Bags</strong></TableCell>
+                                <TableCell align="right"><strong>Total Bags</strong></TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -355,7 +357,9 @@ export default function AnalyticsDashboard() {
                                     <TableCell>{entry.society}</TableCell>
                                     <TableCell>{entry.district}</TableCell>
                                     <TableCell align="right">{entry.quantity.toLocaleString()}</TableCell>
-                                    <TableCell align="right">{entry.bags}</TableCell>
+                                    <TableCell align="right">{entry.gunnyBags || 0}</TableCell>
+                                    <TableCell align="right">{entry.otherBags || 0}</TableCell>
+                                    <TableCell align="right">{(entry.gunnyBags || 0) + (entry.otherBags || 0)}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
