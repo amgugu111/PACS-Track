@@ -153,13 +153,13 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
             id: 'tokenNo',
             label: 'Token Number',
             sortable: true,
-            minWidth: 120,
+            minWidth: 100,
             format: (value) => <Chip label={value} size="small" color="primary" variant="outlined" />,
         },
         {
             id: 'season',
             label: 'Season',
-            minWidth: 150,
+            minWidth: 120,
             format: (value) => value ? (
                 <Chip
                     label={`${value.name} (${value.type})`}
@@ -178,48 +178,48 @@ export default function GateEntryListOptimized({ onEdit }: GateEntryListOptimize
             id: 'pacsName',
             label: 'PACS/PPC Name',
             sortable: true,
-            minWidth: 150,
+            minWidth: 130,
         },
         {
             id: 'vehicleNo',
             label: 'Vehicle No.',
             sortable: true,
-            minWidth: 120,
+            minWidth: 100,
         },
         {
             id: 'gunnyBags',
             label: 'Gunny Bags',
             sortable: true,
             align: 'right',
-            minWidth: 100,
+            minWidth: 80,
         },
         {
             id: 'otherBags',
             label: 'Other Bags',
             sortable: true,
             align: 'right',
-            minWidth: 100,
+            minWidth: 80,
         },
         {
             id: 'totalBags',
             label: 'Total Bags',
             sortable: false,
             align: 'right',
-            minWidth: 100,
+            minWidth: 80,
         },
         {
             id: 'quantity',
             label: 'Quantity',
             sortable: true,
             align: 'right',
-            minWidth: 100,
+            minWidth: 90,
             format: (value) => value.toFixed(2),
         },
         {
             id: 'actions',
             label: 'Actions',
             align: 'center',
-            minWidth: 120,
+            minWidth: 100,
             format: (_, row) => (
                 <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                     <Tooltip title="Edit">
