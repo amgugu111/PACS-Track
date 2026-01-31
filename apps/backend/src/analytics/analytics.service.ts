@@ -45,7 +45,8 @@ export class AnalyticsService {
                     tokenNo: true,
                     date: true,
                     quantity: true,
-                    bags: true,
+                    gunnyBags: true,
+                    otherBags: true,
                     society: {
                         select: {
                             id: true,
@@ -127,10 +128,11 @@ export class AnalyticsService {
                 id: entry.id,
                 tokenNo: entry.tokenNo,
                 date: entry.date,
-                society: entry.society.name,
-                district: entry.district.name,
+                society: entry.society?.name || '',
+                district: entry.district?.name || '',
                 quantity: entry.quantity,
-                bags: entry.bags,
+                gunnyBags: entry.gunnyBags,
+                otherBags: entry.otherBags,
             })),
         };
     }
