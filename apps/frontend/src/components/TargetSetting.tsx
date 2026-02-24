@@ -69,7 +69,7 @@ export default function TargetSetting() {
     const handleTargetChange = (societyId: number, value: string) => {
         setTargets(targets.map(t =>
             t.societyId === societyId
-                ? { ...t, targetQuantity: value === '' ? 0 : parseInt(value) || 0 }
+                ? { ...t, targetQuantity: value === '' ? 0 : parseFloat(value) || 0 }
                 : t
         ));
     };
@@ -173,7 +173,7 @@ export default function TargetSetting() {
                                                 type="number"
                                                 value={target.targetQuantity}
                                                 onChange={(e) => handleTargetChange(target.societyId, e.target.value)}
-                                                inputProps={{ min: 0, step: 1000 }}
+                                                inputProps={{ min: 0, step: 'any' }}
                                                 size="small"
                                                 sx={{ width: 150 }}
                                             />
